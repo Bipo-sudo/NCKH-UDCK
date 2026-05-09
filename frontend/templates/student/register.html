@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3>Đăng ký đề tài</h3>
+<p>Đợt: {{ period.ten_dot }} - Hạn: {{ period.ngay_dong.strftime('%d/%m/%Y') }}</p>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">Tên đề tài</label>
+    <input name="ten_de_tai" class="form-control" maxlength="500" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Giảng viên hướng dẫn</label>
+    <input name="gvhd" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Mô tả</label>
+    <textarea name="mo_ta" class="form-control" rows="4"></textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Sản phẩm dự kiến</label>
+    <textarea name="spdk" class="form-control" rows="3"></textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">File thuyết minh (.docx, .pdf)</label>
+    <input type="file" name="file_thuyet_minh" accept=".docx,.pdf" class="form-control">
+  </div>
+  <button class="btn btn-primary">Gửi đăng ký</button>
+</form>
+{% endblock %}

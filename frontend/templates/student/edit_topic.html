@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3>Chỉnh sửa đề tài</h3>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">Tên đề tài</label>
+    <input name="ten_de_tai" class="form-control" value="{{ topic.ten_de_tai }}" maxlength="500" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Giảng viên hướng dẫn</label>
+    <input name="gvhd" class="form-control" value="{{ topic.giang_vien_huong_dan }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Mô tả</label>
+    <textarea name="mo_ta" class="form-control" rows="4">{{ topic.mo_ta }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Sản phẩm dự kiến</label>
+    <textarea name="spdk" class="form-control" rows="3">{{ topic.san_pham_du_kien }}</textarea>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Cập nhật file thuyết minh (.docx, .pdf)</label>
+    <input type="file" name="file_thuyet_minh" accept=".docx,.pdf" class="form-control">
+  </div>
+  <button class="btn btn-primary">Lưu</button>
+</form>
+{% endblock %}

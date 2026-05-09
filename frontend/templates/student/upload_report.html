@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<h3>Nộp báo cáo</h3>
+<p>Deadline: {{ deadline.strftime('%d/%m/%Y %H:%M') }}</p>
+<form method="post" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label class="form-label">Loại báo cáo</label>
+    <select name="loai_bao_cao" class="form-select">
+      <option value="1">Tiến độ</option>
+      <option value="2">Tổng kết</option>
+      <option value="3">Minh chứng</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">File (.pdf, .docx, .zip, .rar)</label>
+    <input type="file" name="file" accept=".pdf,.docx,.zip,.rar" class="form-control" {% if disabled %}disabled{% endif %}>
+  </div>
+  <button class="btn btn-primary" {% if disabled %}disabled{% endif %}>Tải lên</button>
+</form>
+<hr>
+<h5>Danh sách báo cáo đã nộp</h5>
+<table class="table">
+  <thead><tr><th>Loại</th><th>Ngày nộp</th><th>Trạng thái</th><th>Tải về</th></tr></thead>
+  <tbody>
+    {% for r in reports %}
+    <tr>
+      <td>{{ r.loai_bao_cao }}</td>
+      <td>{{ r.ngay_nop.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td>{{ 'Đã duyệt' if r.trang_thai == 1 else 'Chờ duyệt' }}</td>
+      <td><a class="btn btn-sm btn-outline-secondary" href="/student/report/{{ r.id }}/download">Tải về</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

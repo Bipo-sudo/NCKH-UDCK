@@ -1,0 +1,99 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Dashboard Thống kê</h1>
+  <button type="button" class="btn btn-success" id="btnExportDashboardReport">
+    <i class="fas fa-file-excel me-2"></i>Xuất báo cáo (Excel/PDF)
+  </button>
+</div>
+
+<div class="content-card mb-4">
+  <div class="card-header-custom">
+    <h5>Bộ lọc thống kê</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="row g-2 align-items-end">
+      <div class="col-lg-4">
+        <label for="dashboardFilterYear" class="form-label small fw-semibold">Năm học</label>
+        <select class="form-select" id="dashboardFilterYear">
+          <option value="all">Tất cả năm học</option>
+        </select>
+      </div>
+      <div class="col-lg-4">
+        <label for="dashboardFilterPeriod" class="form-label small fw-semibold">Đợt đăng ký</label>
+        <select class="form-select" id="dashboardFilterPeriod">
+          <option value="all">Tất cả đợt</option>
+        </select>
+      </div>
+      <div class="col-lg-4">
+        <label for="dashboardFilterFaculty" class="form-label small fw-semibold">Khoa</label>
+        <select class="form-select" id="dashboardFilterFaculty">
+          <option value="all">Tất cả khoa</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card primary h-100">
+      <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+      <div class="stat-value" id="summaryTotalTopics">0</div>
+      <div class="stat-label">Tổng số đề tài</div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card warning h-100">
+      <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+      <div class="stat-value" id="summaryInProgress">0</div>
+      <div class="stat-label">Đang triển khai</div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card success h-100">
+      <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-value" id="summaryCompleted">0</div>
+      <div class="stat-label">Đã hoàn thành</div>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card danger h-100">
+      <div class="stat-icon"><i class="fas fa-percent"></i></div>
+      <div class="stat-value" id="summaryCompletionRate">0%</div>
+      <div class="stat-label">Tỷ lệ hoàn thành</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="content-card h-100">
+      <div class="card-header-custom">
+        <h5>Tỷ lệ đề tài theo trạng thái</h5>
+      </div>
+      <div class="card-body-custom">
+        <canvas id="topicsStatusPieChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="content-card h-100">
+      <div class="card-header-custom">
+        <h5>Số lượng đề tài theo khoa</h5>
+      </div>
+      <div class="card-body-custom">
+        <canvas id="topicsByFacultyBarChart" height="250"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
+{% endblock %}

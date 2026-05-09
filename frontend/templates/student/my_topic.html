@@ -1,0 +1,168 @@
+{% extends 'student_layout.html' %}
+{% block title %}Đề tài của tôi{% endblock %}
+{% block content %}
+
+<style>
+  .stage-line {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .stage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0d6efd, #20c997);
+    transition: width .3s ease;
+  }
+  .stage-label {
+    font-size: .8rem;
+    color: #6c757d;
+    text-align: center;
+  }
+  .stage-label.active {
+    color: #0d6efd;
+    font-weight: 600;
+  }
+  .ui-test-box {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 1080;
+    background: rgba(255,255,255,.96);
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 .35rem 1rem rgba(0,0,0,.12);
+    width: 280px;
+  }
+  .topic-card-horizontal {
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .topic-card-horizontal:hover {
+    transform: translateY(-2px);
+  }
+  .status-badges-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+</style>
+
+<div class="mb-4">
+  <h1 class="display-6 fw-bold mb-1"><i class="fas fa-file-alt me-2 text-primary"></i>Đề tài cá nhân</h1>
+  <p class="text-muted mb-0">Theo dõi tiến độ, nhắc hạn nộp và xử lý các yêu cầu theo từng trạng thái nghiệp vụ.</p>
+</div>
+
+<div id="topicListView">
+  <div class="card mb-4">
+    <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+      <div>
+        <h5 class="mb-1">Danh sách đề tài đang tham gia</h5>
+        <p class="text-muted mb-0">Sinh viên có thể tham gia nhiều đề tài. Chọn một đề tài để xem chi tiết.</p>
+      </div>
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" id="topicListCounter">0 đề tài</span>
+    </div>
+  </div>
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label for="filterPeriodSelect" class="form-label small fw-semibold">Lọc theo Đợt</label>
+          <select id="filterPeriodSelect" class="form-select form-select-sm">
+            <option value="all">Tất cả</option>
+            <option value="Năm học 2025-2026">Năm học 2025-2026</option>
+            <option value="Năm học 2024-2025">Năm học 2024-2025</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="filterStatusSelect" class="form-label small fw-semibold">Lọc theo Trạng thái</label>
+          <select id="filterStatusSelect" class="form-select form-select-sm">
+            <option value="all">Tất cả</option>
+            <option value="1">Chờ duyệt đề cương</option>
+            <option value="2">Sửa đề cương</option>
+            <option value="3">Bị từ chối</option>
+            <option value="4">Đang triển khai</option>
+            <option value="5">Chờ duyệt báo cáo</option>
+            <option value="6">Yêu cầu sửa báo cáo</option>
+            <option value="7">Chờ/Đang bảo vệ</option>
+            <option value="8">Nghiệm thu thành công</option>
+            <option value="9">Hoàn thành</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="sortDeadlineSelect" class="form-label small fw-semibold">Sắp xếp theo Hạn nộp</label>
+          <select id="sortDeadlineSelect" class="form-select form-select-sm">
+            <option value="nearest">Gần nhất trước</option>
+            <option value="farthest">Xa nhất trước</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row g-3" id="myTopicListContainer"></div>
+</div>
+
+<div id="topicDetailView" class="d-none">
+  <div class="mb-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="btnBackToTopicList">
+      <i class="fas fa-arrow-left me-2"></i>Quay lại danh sách
+    </button>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Tiến độ đề tài</h5>
+        <span class="badge bg-primary" id="topicCurrentStageLabel">-</span>
+      </div>
+      <div class="stage-line mb-3"><div class="stage-fill" id="topicStageFill" style="width: 0%"></div></div>
+      <div class="row g-2">
+        <div class="col-6 col-md stage-label" id="stage-label-1">1 Chờ duyệt đề cương</div>
+        <div class="col-6 col-md stage-label" id="stage-label-2">2 Sửa đề cương</div>
+        <div class="col-6 col-md stage-label" id="stage-label-3">3 Bị từ chối</div>
+        <div class="col-6 col-md stage-label" id="stage-label-4">4 Đang triển khai</div>
+        <div class="col-6 col-md stage-label" id="stage-label-5">5 Chờ duyệt báo cáo</div>
+        <div class="col-6 col-md stage-label" id="stage-label-6">6 Yêu cầu sửa báo cáo</div>
+        <div class="col-6 col-md stage-label" id="stage-label-7">7 Chờ/Đang bảo vệ</div>
+        <div class="col-6 col-md stage-label" id="stage-label-8">8 Không đạt/Hủy</div>
+        <div class="col-6 col-md stage-label" id="stage-label-9">9 Hoàn thành</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4" id="topicGeneralCard"></div>
+      <div class="card mb-4" id="topicAuthorsCard"></div>
+      <div class="card" id="topicAdvisorCard"></div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card mb-4" id="topicStatusCard"></div>
+      <div class="card" id="topicSubmissionCard"></div>
+    </div>
+  </div>
+
+  <div class="card mt-4" id="topicHistoryCard"></div>
+
+  <div class="ui-test-box" id="topicUiTestBox" style="display:none;">
+    <label for="topicStatusTestSelect" class="form-label small fw-semibold mb-1">Dropdown Test UI (Frontend)</label>
+    <select id="topicStatusTestSelect" class="form-select form-select-sm">
+      <option value="1">1 - Chờ duyệt đề cương</option>
+      <option value="2">2 - Sửa đề cương</option>
+      <option value="3">3 - Bị từ chối</option>
+      <option value="4">4 - Đang triển khai</option>
+      <option value="5">5 - Chờ duyệt báo cáo</option>
+      <option value="6">6 - Yêu cầu sửa báo cáo</option>
+      <option value="7">7 - Chờ/Đang bảo vệ</option>
+      <option value="8">8 - Không đạt/Hủy</option>
+      <option value="9">9 - Hoàn thành</option>
+    </select>
+    <small class="text-muted d-block mt-1">Chỉ dùng để test giao diện động.</small>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/student_my_topic.js') }}"></script>
+{% endblock %}

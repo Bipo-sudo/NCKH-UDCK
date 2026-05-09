@@ -1,0 +1,144 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Quản lý Tài khoản{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Quản lý Tài khoản</h1>
+  <button class="btn btn-primary" id="btnOpenAddAccount" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+    <i class="fas fa-plus me-2"></i>Thêm tài khoản
+  </button>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5>Danh sách tài khoản sinh viên</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="toolbar mb-3">
+      <div class="row g-2 align-items-end">
+        <div class="col-lg-4">
+          <label for="searchAccount" class="form-label small fw-semibold">Tìm kiếm</label>
+          <input type="text" id="searchAccount" class="form-control" placeholder="Tìm Username hoặc MSSV...">
+        </div>
+        <div class="col-lg-2">
+          <label for="filterFaculty" class="form-label small fw-semibold">Khoa</label>
+          <select id="filterFaculty" class="form-select">
+            <option value="all">Tất cả</option>
+          </select>
+        </div>
+        <div class="col-lg-2">
+          <label for="filterKhoaHoc" class="form-label small fw-semibold">Khóa</label>
+          <select id="filterKhoaHoc" class="form-select">
+            <option value="all">Tất cả</option>
+          </select>
+        </div>
+        <div class="col-lg-2">
+          <label for="filterClass" class="form-label small fw-semibold">Lớp</label>
+          <select id="filterClass" class="form-select">
+            <option value="all">Tất cả</option>
+          </select>
+        </div>
+        <div class="col-lg-2">
+          <button type="button" class="btn btn-outline-secondary w-100" id="btnResetAccountFilters">
+            <i class="fas fa-rotate-left me-2"></i>Đặt lại
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-custom align-middle">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Tài khoản</th>
+            <th>Thông tin Sinh viên</th>
+            <th style="width: 12%;">Vai trò</th>
+            <th style="width: 12%;">Trạng thái</th>
+            <th style="width: 16%;">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="accountsTableBody"></tbody>
+      </table>
+    </div>
+
+    <nav aria-label="Pagination" class="mt-3">
+      <ul class="pagination justify-content-center mb-0" id="accountsPagination"></ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Add Account Modal -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" id="accountForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="accountModalTitle">Thêm tài khoản sinh viên</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="accountEditId" value="">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-3">Thông tin Đăng nhập</h6>
+              <div class="mb-3">
+                <label class="form-label">Username <span class="text-danger">*</span></label>
+                <input name="username" id="accountUsername" class="form-control" placeholder="VD: K23TT0001" maxlength="50" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                <input name="email" id="accountEmail" type="email" class="form-control" placeholder="email@udn.vn" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
+                <div class="input-group">
+                  <input name="password" type="password" id="passwordInput" class="form-control" value="123456" required>
+                  <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                    <i class="fas fa-eye" id="toggleIcon"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-3">Thông tin Sinh viên</h6>
+              <div class="mb-3">
+                <label class="form-label">MSSV <span class="text-danger">*</span></label>
+                <input name="mssv" id="mssvInput" class="form-control" placeholder="VD: K23TT0001" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Lớp <span class="text-danger">*</span></label>
+                <input name="lop" id="accountClass" class="form-control" placeholder="VD: K23TT" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Họ và tên</label>
+                <input name="ho_ten" id="accountFullName" class="form-control" placeholder="Họ và tên đầy đủ">
+              </div>
+              <div class="row g-2">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Khoa</label>
+                  <input name="khoa" id="accountFaculty" class="form-control" placeholder="VD: CNTT">
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Khóa</label>
+                  <input name="khoa_hoc" id="accountKhoaHoc" class="form-control" placeholder="VD: 2023">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="alert alert-info mt-3 mb-0 small">
+            Models Tài khoản/Sinh viên ở backend cần khớp 100% các trường bắt buộc/không bắt buộc này để dữ liệu frontend có thể lưu nguyên vẹn.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary" id="accountSubmitButton">Tạo tài khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin-accounts.js') }}"></script>
+{% endblock %}

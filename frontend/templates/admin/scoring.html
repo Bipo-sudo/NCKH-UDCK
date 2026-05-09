@@ -1,0 +1,81 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Chấm điểm{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Chấm điểm & Công bố</h1>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5>Nhập điểm cho đề tài</h5>
+  </div>
+  <div class="card-body-custom">
+    <form method="post">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">Đề tài</label>
+          <select name="topic_id" class="form-select" required>
+            <option value="">Chọn đề tài...</option>
+            {% for t in topics %}
+            <option value="{{ t.id }}">#{{ t.id }} - {{ t.ten_de_tai }} ({{ t.sinh_vien.ho_ten }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Điểm số (0-10)</label>
+          <input name="score" type="number" step="0.1" min="0" max="10" class="form-control" placeholder="VD: 8.5" required>
+        </div>
+        <div class="col-md-4">
+          <button type="submit" class="btn btn-success w-100">
+            <i class="fas fa-save me-2"></i>Lưu & Công bố
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="content-card mt-4">
+  <div class="card-header-custom">
+    <h5>Danh sách đã chấm điểm</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="table-responsive">
+      <table class="table table-custom">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Sinh viên</th>
+            <th>Điểm</th>
+            <th>Xếp loại</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in topics %}
+          {% if t.diem_so is not none %}
+          <tr>
+            <td><strong>#{{ t.id }}</strong></td>
+            <td>{{ t.ten_de_tai }}</td>
+            <td>{{ t.sinh_vien.ho_ten }}</td>
+            <td><strong class="text-primary">{{ t.diem_so }}</strong></td>
+            <td>
+              {% if t.xep_loai %}
+              <span class="badge-status badge-completed">{{ t.xep_loai }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.trang_thai == 4 %}
+              <span class="badge-status badge-completed">Hoàn thành</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

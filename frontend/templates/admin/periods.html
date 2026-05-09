@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý Đợt NCKH - UDCK NCKH</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/admin.css') }}" rel="stylesheet">
+</head>
+<body>
+  <div class="d-flex min-vh-100">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <i class="fas fa-graduation-cap"></i>
+        <span>UDCK NCKH</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/admin/admin_dashboard.html" class="nav-item" data-page="admin_dashboard.html">
+          <i class="fas fa-chart-line"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="/admin/admin_periods.html" class="nav-item" data-page="admin_periods.html">
+          <i class="fas fa-calendar-alt"></i>
+          <span>Quản lý Đợt NCKH</span>
+        </a>
+        <a href="/admin/admin_topics.html" class="nav-item" data-page="admin_topics.html">
+          <i class="fas fa-file-alt"></i>
+          <span>Quản lý Đề tài</span>
+        </a>
+        <a href="/admin/admin_accounts.html" class="nav-item" data-page="admin_accounts.html">
+          <i class="fas fa-users"></i>
+          <span>Quản lý Tài khoản</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content flex-grow-1" id="mainContent">
+      <header class="top-header">
+        <button class="btn-toggle" id="sidebarToggle" type="button">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="header-right">
+          <div class="admin-info">
+            <span class="admin-name">Admin</span>
+            <i class="fas fa-user-circle fa-2x"></i>
+          </div>
+          <a href="/logout" class="btn btn-sm btn-outline-danger ms-3">
+            <i class="fas fa-sign-out-alt"></i> Đăng xuất
+          </a>
+        </div>
+      </header>
+
+      <div class="content-wrapper">
+        <div id="periodsDataHolder" class="d-none" data-periods='{{ periods_data|tojson|forceescape }}'></div>
+        <div class="card shadow-sm border-0">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+              <label for="filterYear" class="mb-0 fw-semibold">Năm học:</label>
+              <select id="filterYear" class="form-select" style="width: 140px;">
+                <option value="">Tất cả năm học</option>
+                {% for period in periods %}
+                  {% if period.nam_hoc %}
+                <option value="{{ period.nam_hoc }}">{{ period.nam_hoc }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+            </div>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addPeriodModal">
+              <i class="fas fa-plus me-2"></i>+ Thêm đợt NCKH
+            </button>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Đợt NCKH</th>
+                    <th>Cấp bậc</th>
+                    <th>Thông báo</th>
+                    <th>Mở đăng ký</th>
+                    <th>Hạn đề cương</th>
+                    <th>Hạn báo cáo</th>
+                    <th>Tệp đính kèm</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="periodsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Thêm đợt NCKH -->
+  <div class="modal fade" id="addPeriodModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm đợt NCKH</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="ten_dot" class="form-label">Tên đợt NCKH</label>
+            <input id="ten_dot" type="text" class="form-control" placeholder="Ví dụ: Đợt NCKH Sinh viên Cấp Trường" required>
+          </div>
+          <div class="mb-3">
+            <label for="nam_hoc" class="form-label">Năm học</label>
+            <input id="nam_hoc" type="text" class="form-control" placeholder="Ví dụ: 2025-2026" pattern="\\d{4}-\\d{4}" inputmode="numeric" required>
+            <small class="text-muted">Nhập đúng dạng năm học, ví dụ: 2024-2025 hoặc 2025-2026.</small>
+          </div>
+          <div class="mb-3">
+            <label for="cap_bac" class="form-label">Cấp bậc NCKH</label>
+            <select id="cap_bac" class="form-select" required>
+              <option value="Cấp Khoa">Cấp Khoa</option>
+              <option value="Cấp Trường" selected>Cấp Trường</option>
+              <option value="Cấp Bộ">Cấp Bộ</option>
+              <option value="Cấp Quốc gia">Cấp Quốc gia</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="periodDetail" class="form-label">Mô tả</label>
+            <textarea id="periodDetail" class="form-control" rows="3" placeholder="Nhập mô tả hoặc nội dung thông báo của đợt..."></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="thoiGianThongBao" class="form-label">Thời gian thông báo</label>
+            <input id="thoiGianThongBao" type="datetime-local" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="thoiGianMoDangKy" class="form-label">Thời gian mở đăng ký</label>
+            <input id="thoiGianMoDangKy" type="datetime-local" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="hanNopDeCuong" class="form-label">Hạn nộp đề cương</label>
+            <input id="hanNopDeCuong" type="datetime-local" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="hanNopBaoCao" class="form-label">Hạn nộp báo cáo</label>
+            <input id="hanNopBaoCao" name="han_nop_bao_cao" type="datetime-local" class="form-control" required>
+            <small class="text-muted">Bốn mốc phải tăng dần: thông báo, mở đăng ký, nộp đề cương, nộp báo cáo.</small>
+          </div>
+          <div>
+            <label for="periodAttachment" class="form-label">Tệp đính kèm (Thông báo/Quyết định)</label>
+            <input id="periodAttachment" type="file" class="form-control" accept=".pdf,.doc,.docx">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary" id="savePeriodBtn">Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/admin_periods.js') }}"></script>
+</body>
+</html>

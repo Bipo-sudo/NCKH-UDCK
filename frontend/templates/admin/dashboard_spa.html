@@ -1,0 +1,404 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+
+<!-- Tab 1: Dashboard -->
+<div class="tab-pane fade show active" id="tab-dashboard">
+  <div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card primary">
+      <div class="stat-icon">
+        <i class="fas fa-file-alt"></i>
+      </div>
+      <div class="stat-value" id="stat-total">{{ total }}</div>
+      <div class="stat-label">Tổng đề tài</div>
+    </div>
+    
+    <div class="stat-card success">
+      <div class="stat-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-value" id="stat-completed">{{ completed }}</div>
+      <div class="stat-label">Hoàn thành</div>
+    </div>
+    
+    <div class="stat-card warning">
+      <div class="stat-icon">
+        <i class="fas fa-spinner"></i>
+      </div>
+      <div class="stat-value" id="stat-progress">{{ in_progress }}</div>
+      <div class="stat-label">Đang nghiệm thu</div>
+    </div>
+    
+    <div class="stat-card danger">
+      <div class="stat-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-value" id="stat-proposed">{{ proposed }}</div>
+      <div class="stat-label">Chờ duyệt</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="content-card">
+    <div class="card-header-custom">
+      <h5>Thao tác nhanh</h5>
+    </div>
+    <div class="card-body-custom">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <a href="#tab-periods" data-bs-toggle="tab" class="btn btn-outline-primary w-100">
+            <i class="fas fa-calendar-alt me-2"></i>Quản lý đợt
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a href="#tab-topics" data-bs-toggle="tab" class="btn btn-outline-warning w-100">
+            <i class="fas fa-file-alt me-2"></i>Quản lý đề tài
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a href="#tab-accounts" data-bs-toggle="tab" class="btn btn-outline-info w-100">
+            <i class="fas fa-users me-2"></i>Quản lý tài khoản
+          </a>
+        </div>
+        <div class="col-md-3">
+          <a href="#tab-scoring" data-bs-toggle="tab" class="btn btn-outline-success w-100">
+            <i class="fas fa-star me-2"></i>Chấm điểm
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 2: Periods -->
+<div class="tab-pane fade" id="tab-periods">
+  <div class="page-header">
+    <h1 class="page-title">Quản lý Năm/Đợt đăng ký</h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addPeriodModal">
+      <i class="fas fa-plus me-2"></i>Thêm đợt mới
+    </button>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header-custom">
+      <h5>Danh sách đợt đăng ký</h5>
+      <div class="filters-bar">
+        <select class="form-select" id="filterYear">
+          <option value="">Tất cả năm học</option>
+          <option value="2025-2026">2025-2026</option>
+          <option value="2024-2025">2024-2025</option>
+        </select>
+      </div>
+    </div>
+    <div class="card-body-custom">
+      <div class="table-responsive">
+        <table class="table table-custom">
+          <thead>
+            <tr>
+              <th>Tên đợt</th>
+              <th>Năm học</th>
+              <th>Thời gian mở</th>
+              <th>Thời gian đóng</th>
+              <th>Hạn nộp báo cáo</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in periods %}
+            <tr>
+              <td><strong>{{ p.ten_dot }}</strong></td>
+              <td>{{ p.nam_hoc or '-' }}</td>
+              <td>{{ p.ngay_mo.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td>{{ p.ngay_dong.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td>{{ p.han_nop_bao_cao.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td><span class="badge-status badge-active">Đang diễn ra</span></td>
+              <td>
+                <div class="action-buttons">
+                  <button class="btn-action edit" title="Chỉnh sửa">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn-action delete" title="Xóa">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 3: Topics -->
+<div class="tab-pane fade" id="tab-topics">
+  <div class="page-header">
+    <h1 class="page-title">Quản lý Đề tài</h1>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header-custom">
+      <h5>Danh sách đề tài</h5>
+    </div>
+    <div class="card-body-custom">
+      <div class="filters-bar">
+        <select class="form-select" id="filterTopicYear">
+          <option value="">Tất cả năm học</option>
+          <option value="2025-2026">2025-2026</option>
+          <option value="2024-2025">2024-2025</option>
+        </select>
+        <select class="form-select" id="filterTopicStatus">
+          <option value="">Tất cả trạng thái</option>
+          <option value="1">Đã nộp đề xuất</option>
+          <option value="2">Chờ SV nộp thuyết minh</option>
+          <option value="3">Đã nộp thuyết minh</option>
+          <option value="4">Chờ SV ký duyệt</option>
+          <option value="5">Chờ báo cáo 1/2 tiến độ</option>
+          <option value="6">Đã đạt 1/2 tiến độ</option>
+          <option value="7">Đã báo cáo nghiệm thu</option>
+          <option value="8">Kết thúc đề tài</option>
+        </select>
+      </div>
+      <div class="table-responsive mt-3">
+        <table class="table table-custom" id="topicsTable">
+          <thead>
+            <tr>
+              <th>Mã ĐT</th>
+              <th>Tên đề tài</th>
+              <th>Sinh viên</th>
+              <th>Năm/Đợt</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="topicsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 4: Accounts -->
+<div class="tab-pane fade" id="tab-accounts">
+  <div class="page-header">
+    <h1 class="page-title">Quản lý Tài khoản</h1>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+      <i class="fas fa-plus me-2"></i>Thêm tài khoản
+    </button>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header-custom">
+      <h5>Danh sách tài khoản sinh viên</h5>
+    </div>
+    <div class="card-body-custom">
+      <!-- Toolbar -->
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+        <!-- Filters (Left) -->
+        <div class="d-flex gap-2">
+          <select class="form-select" id="filterClass" style="width: 150px;">
+            <option value="">Tất cả lớp</option>
+            <option value="K22TT">K22TT</option>
+            <option value="K23TT">K23TT</option>
+            <option value="K24TT">K24TT</option>
+          </select>
+          <select class="form-select" id="filterStatus" style="width: 150px;">
+            <option value="">Tất cả trạng thái</option>
+            <option value="true">Hoạt động</option>
+            <option value="false">Bị khóa</option>
+          </select>
+        </div>
+        
+        <!-- Search (Right) -->
+        <div class="input-group" style="max-width: 400px;">
+          <select class="form-select" id="searchCriteria" style="max-width: 150px;">
+            <option value="all">Tất cả</option>
+            <option value="username">Username</option>
+            <option value="mssv">MSSV</option>
+            <option value="name">Họ tên</option>
+          </select>
+          <input type="text" class="form-control" id="searchInput" placeholder="Nhập từ khóa tìm kiếm...">
+          <button class="btn btn-outline-secondary" type="button">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-custom">
+          <thead>
+            <tr>
+              <th>MSSV/Username</th>
+              <th>Họ tên</th>
+              <th>Email</th>
+              <th>Lớp</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="accountsTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <nav aria-label="Pagination">
+        <ul class="pagination justify-content-center" id="accountsPagination"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<!-- Tab 5: Scoring -->
+<div class="tab-pane fade" id="tab-scoring">
+  <div class="page-header">
+    <h1 class="page-title">Chấm điểm & Công bố</h1>
+  </div>
+
+  <div class="content-card">
+    <div class="card-header-custom">
+      <h5>Nhập điểm cho đề tài</h5>
+    </div>
+    <div class="card-body-custom">
+      <form>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">Đề tài</label>
+            <select class="form-select" required>
+              <option value="">Chọn đề tài...</option>
+              <option>#1 - Xây dựng hệ thống quản lý (Nguyễn Văn A)</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Điểm số (0-10)</label>
+            <input type="number" step="0.1" min="0" max="10" class="form-control" placeholder="VD: 8.5" required>
+          </div>
+          <div class="col-md-4">
+            <button type="submit" class="btn btn-success w-100">
+              <i class="fas fa-save me-2"></i>Lưu & Công bố
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block overlays %}
+<!-- Modals -->
+<div class="modal fade" id="addPeriodModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="/admin/periods">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm đợt đăng ký mới</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Năm học</label>
+              <select name="nam_hoc" class="form-select" required>
+                <option value="2025-2026" selected>2025-2026</option>
+                <option value="2026-2027">2026-2027</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Tên đợt</label>
+              <input name="ten_dot" class="form-control" placeholder="VD: NCKH 2025-2026" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Thời gian mở</label>
+              <input name="ngay_mo" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Thời gian đóng</label>
+              <input name="ngay_dong" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Hạn nộp báo cáo</label>
+              <input name="han_nop" type="datetime-local" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Tạo đợt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="/admin/accounts">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm tài khoản sinh viên</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">MSSV</label>
+            <input name="mssv" id="mssvInput" class="form-control" placeholder="VD: K23TT0001" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input name="username" class="form-control" placeholder="VD: K23TT0001" maxlength="50" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Họ tên</label>
+            <input name="full_name" class="form-control" placeholder="Họ và tên đầy đủ" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email @udn.vn</label>
+            <input name="email" type="email" class="form-control" placeholder="email@udn.vn" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Mật khẩu khởi tạo</label>
+            <div class="input-group">
+              <input name="password" type="password" id="passwordInput" class="form-control" value="UDCK@123" required>
+              <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                <i class="fas fa-eye" id="toggleIcon"></i>
+              </button>
+            </div>
+            <small class="text-muted">Bạn có thể thay đổi mật khẩu này trước khi tạo tài khoản</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="btn btn-primary">Tạo tài khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Topic Detail Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="topicDetailOffcanvas">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="topicDetailTitle">Chi tiết đề tài</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div id="topicDetailContent"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin-accounts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin-topics.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Quản lý Tiến độ{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Quản lý Tiến độ</h1>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5>Danh sách đề tài đang nghiệm thu</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="table-responsive">
+      <table class="table table-custom">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Sinh viên</th>
+            <th>Báo cáo đã nộp</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in topics %}
+          <tr>
+            <td><strong>#{{ t.id }}</strong></td>
+            <td>{{ t.ten_de_tai }}</td>
+            <td>{{ t.sinh_vien.ho_ten }}<br><small class="text-muted">{{ t.sinh_vien.mssv }}</small></td>
+            <td>
+              {% if t.reports|length > 0 %}
+                <div class="d-flex flex-column gap-1">
+                  {% for r in t.reports %}
+                  <div>
+                    <span class="badge bg-secondary">Loại {{ r.loai_bao_cao }}</span>
+                    <small class="text-muted">{{ r.ngay_nop.strftime('%d/%m/%Y') }}</small>
+                    {% if r.trang_thai == 1 %}
+                    <i class="fas fa-check-circle text-success" title="Đã duyệt"></i>
+                    {% else %}
+                    <i class="fas fa-clock text-warning" title="Chờ duyệt"></i>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted">Chưa có báo cáo</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if t.reports|length > 0 %}
+              <div class="action-buttons">
+                {% for r in t.reports %}
+                <a href="/admin/report/{{ r.id }}/download" class="btn-action view" title="Tải báo cáo {{ r.loai_bao_cao }}">
+                  <i class="fas fa-download"></i>
+                </a>
+                {% if r.trang_thai == 0 %}
+                <form method="post" action="/admin/report/{{ r.id }}/approve" class="d-inline">
+                  <button type="submit" class="btn-action" style="background: #d1fae5; color: #065f46;" title="Duyệt báo cáo">
+                    <i class="fas fa-check"></i>
+                  </button>
+                </form>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

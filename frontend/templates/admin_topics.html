@@ -1,0 +1,193 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Quản lý Đề tài{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Quản lý Đề tài</h1>
+</div>
+
+<div id="adminTopicContextBox" class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+  <div>
+    <div class="fw-semibold">Đợt đang áp dụng: <span id="currentPeriodName">-</span></div>
+    <small id="currentPeriodStateText" class="text-muted d-block"></small>
+    <small class="text-muted d-inline-flex align-items-center gap-2 mt-1">Cấp bậc: <span id="currentPeriodCapBacBadge" class="badge bg-success">-</span></small>
+  </div>
+  <span class="badge bg-info text-dark" id="currentPeriodStateBadge">-</span>
+</div>
+
+<div id="currentPeriodDataHolder" class="d-none" data-period='{{ current_period_data|tojson|forceescape if current_period_data else "" }}'></div>
+
+<div class="content-card border border-warning-subtle mb-4">
+  <div class="card-header-custom d-flex justify-content-between align-items-center">
+    <h5 class="mb-0" id="pendingZoneTitle"><i class="fas fa-bell me-2 text-warning"></i>Đề tài cần xử lý ngay</h5>
+    <span class="badge bg-warning text-dark" id="pendingTopicsCount">0</span>
+  </div>
+  <div class="card-body-custom">
+    <div id="pendingTopicsContainer" class="d-flex flex-column gap-3"></div>
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5 id="mainWorkTitle">Danh sách Đề tài đang triển khai &amp; Hoàn thành</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="filters-bar row g-2">
+      <div class="col-lg-4">
+        <input type="text" id="filterKeyword" class="form-control" placeholder="Tìm mã đề tài / tên đề tài / MSSV...">
+      </div>
+      <div class="col-lg-3">
+        <select class="form-select" id="filterYear">
+          <option value="">Tất cả năm học</option>
+          {% for period in periods_data or [] %}
+            {% if period.nam_hoc %}
+          <option value="{{ period.nam_hoc }}">{{ period.nam_hoc }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-lg-3">
+        <select class="form-select" id="filterStatus">
+          <option value="">Tất cả trạng thái</option>
+          <option value="1">Chờ duyệt đề cương</option>
+          <option value="2">Yêu cầu sửa đề cương</option>
+          <option value="3">Bị từ chối</option>
+          <option value="4">Đang triển khai</option>
+          <option value="5">Chờ duyệt báo cáo</option>
+          <option value="6">Yêu cầu sửa báo cáo</option>
+          <option value="7">Chờ/Đang bảo vệ</option>
+          <option value="8">Không đạt/Hủy</option>
+          <option value="9">Hoàn thành</option>
+        </select>
+      </div>
+      <div class="col-lg-2">
+        <button type="button" class="btn btn-outline-secondary w-100" id="btnResetTopicFilters">
+          <i class="fas fa-rotate-left me-2"></i>Đặt lại
+        </button>
+      </div>
+    </div>
+
+    <div class="table-responsive mt-3">
+      <table class="table table-custom" id="topicsTable">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Tác giả</th>
+            <th>Năm học</th>
+            <th>Trạng thái</th>
+            <th>Giải thưởng</th>
+            <th>Cập nhật lần cuối</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="activeTopicsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="content-card mt-4 bg-light border">
+  <div class="card-header-custom d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><i class="fas fa-box-archive me-2 text-secondary"></i>Danh sách đề tài quá hạn / bị hủy (Archived)</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="table-responsive">
+      <table class="table table-sm table-bordered table-light mb-0" id="archiveTopicsTable">
+        <thead class="table-secondary">
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Tác giả</th>
+            <th>Trạng thái</th>
+            <th>Lý do</th>
+            <th>Cập nhật lần cuối</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="archiveTopicsTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="topicDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Chi tiết Hồ sơ Đề tài</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="topicDetailContent"></div>
+      <div class="modal-footer">
+        <div id="detailActionButtons" class="w-100 d-flex justify-content-end gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="reasonModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nhập lý do</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label for="reasonInput" class="form-label">Lý do</label>
+        <textarea id="reasonInput" class="form-control" rows="3" placeholder="Nhập lý do chi tiết..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" onclick="submitReason()">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="awardModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Cập nhật Giải thưởng</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="awardScoreInput" class="form-label">Điểm số (0 - 10)</label>
+          <input id="awardScoreInput" type="number" min="0" max="10" step="0.1" class="form-control" placeholder="VD: 8.5">
+        </div>
+        <div class="mb-3">
+          <label for="awardLevelInput" class="form-label">Cấp giải thưởng</label>
+          <select id="awardLevelInput" class="form-select">
+            <option value="Không có">Không có</option>
+            <option value="Cấp Khoa">Cấp Khoa</option>
+            <option value="Cấp Trường">Cấp Trường</option>
+            <option value="Cấp Bộ">Cấp Bộ</option>
+            <option value="Cấp Quốc gia">Cấp Quốc gia</option>
+          </select>
+        </div>
+        <div class="mb-0">
+          <label for="awardRankInput" class="form-label">Xếp loại giải</label>
+          <select id="awardRankInput" class="form-select">
+            <option value="">Không áp dụng</option>
+            <option value="Nhất">Nhất</option>
+            <option value="Nhì">Nhì</option>
+            <option value="Ba">Ba</option>
+            <option value="Khuyến khích">Khuyến khích</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" id="btnSaveAward">Lưu giải thưởng</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin_topics.js') }}"></script>
+{% endblock %}

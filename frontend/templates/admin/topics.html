@@ -1,0 +1,297 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Quản lý Đề tài{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Quản lý Đề tài</h1>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5>Danh sách đề tài</h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="filters-bar d-flex gap-2 flex-wrap">
+      <select class="form-select" id="filterYear" onchange="filterTopics()" style="max-width: 220px;">
+        <option value="">Tất cả năm học</option>
+        {% for p in periods %}
+          {% if p.nam_hoc %}
+          <option value="{{ p.nam_hoc }}">{{ p.nam_hoc }}</option>
+          {% endif %}
+        {% endfor %}
+      </select>
+
+      <select class="form-select" id="filterStudent" onchange="filterTopics()" style="max-width: 260px;">
+        <option value="">Tất cả sinh viên</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}">{{ acc.ho_ten }} ({{ acc.mssv }})</option>
+        {% endfor %}
+      </select>
+
+      <select class="form-select" id="filterStatus" onchange="filterTopics()" style="max-width: 260px;">
+        <option value="">Tất cả trạng thái</option>
+        <option value="1">Chờ xét duyệt đề xuất</option>
+        <option value="2">Yêu cầu chỉnh sửa đề xuất</option>
+        <option value="3">Đề tài bị từ chối</option>
+        <option value="4">Đang thực hiện</option>
+        <option value="5">Chờ nghiệm thu</option>
+        <option value="6">Sửa báo cáo tổng kết</option>
+        <option value="7">Không đạt</option>
+        <option value="8">Đã hoàn thành</option>
+      </select>
+    </div>
+
+    <div class="table-responsive mt-3">
+      <table class="table table-custom" id="topicsTable">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Tác giả</th>
+            <th>Đợt/Năm học</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for topic in topics %}
+          <tr
+            data-year="{{ topic.dot_dang_ky.nam_hoc if topic.dot_dang_ky else '' }}"
+            data-status="{{ topic.trang_thai }}"
+            data-student="{{ topic.sinh_vien.id if topic.sinh_vien else '' }}"
+          >
+            <td>#{{ topic.id }}</td>
+            <td>
+              <strong>{{ topic.ten_de_tai }}</strong><br>
+              <small class="text-muted">GVHD: {{ topic.giang_vien_huong_dan or 'Chưa cập nhật' }}</small>
+            </td>
+            <td>
+              {% if topic.sinh_vien %}
+                {{ topic.sinh_vien.ho_ten }}<br>
+                <small class="text-muted">{{ topic.sinh_vien.mssv }}</small>
+              {% else %}
+                <span class="text-muted">Không có dữ liệu</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if topic.dot_dang_ky %}
+                {{ topic.dot_dang_ky.ten_dot }}<br>
+                <small class="text-muted">{{ topic.dot_dang_ky.nam_hoc }}</small>
+              {% else %}
+                <span class="text-muted">Chưa gán đợt</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if topic.trang_thai == 1 %}
+                <span class="badge bg-secondary">Chờ xét duyệt đề xuất</span>
+              {% elif topic.trang_thai == 2 %}
+                <span class="badge bg-warning text-dark">Yêu cầu chỉnh sửa đề xuất</span>
+              {% elif topic.trang_thai == 3 %}
+                <span class="badge bg-dark">Đề tài bị từ chối</span>
+              {% elif topic.trang_thai == 4 %}
+                <span class="badge bg-primary">Đang thực hiện</span>
+              {% elif topic.trang_thai == 5 %}
+                <span class="badge bg-info text-dark">Chờ nghiệm thu</span>
+              {% elif topic.trang_thai == 6 %}
+                <span class="badge bg-warning text-dark">Sửa báo cáo tổng kết</span>
+              {% elif topic.trang_thai == 7 %}
+                <span class="badge bg-danger">Không đạt</span>
+              {% elif topic.trang_thai == 8 %}
+                <span class="badge bg-primary">Đã hoàn thành</span>
+              {% else %}
+                <span class="badge bg-secondary">Không xác định</span>
+              {% endif %}
+            </td>
+            <td>
+              <button
+                class="btn btn-sm btn-outline-primary"
+                title="Xem chi tiết"
+                data-bs-toggle="modal"
+                data-bs-target="#topicDetailModal"
+                data-topic-id="{{ topic.id }}"
+                data-topic-title="{{ topic.ten_de_tai }}"
+                data-topic-status="{{ topic.trang_thai }}"
+                data-topic-period="{{ topic.dot_dang_ky.ten_dot if topic.dot_dang_ky else '' }}"
+                data-topic-year="{{ topic.dot_dang_ky.nam_hoc if topic.dot_dang_ky else '' }}"
+                data-topic-author="{{ topic.sinh_vien.ho_ten if topic.sinh_vien else '' }}"
+                data-topic-mssv="{{ topic.sinh_vien.mssv if topic.sinh_vien else '' }}"
+                data-topic-objective="{{ topic.mo_ta or '' }}"
+                data-topic-reason="{{ topic.ly_do or '' }}"
+                onclick="showTopicDetail(this)"
+              >
+                <i class="fas fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Chưa có đề tài nào.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="topicDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Chi tiết Hồ sơ Đề tài</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="topicDetailContent"></div>
+      <div class="modal-footer">
+        <div id="detailActionButtons" class="w-100 d-flex justify-content-end gap-2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="reasonModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Nhập lý do</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <label for="reasonInput" class="form-label">Lý do</label>
+        <textarea id="reasonInput" class="form-control" rows="3" placeholder="Nhập lý do chi tiết..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" onclick="submitReason()">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterTopics() {
+  const year = document.getElementById('filterYear').value;
+  const status = document.getElementById('filterStatus').value;
+  const student = document.getElementById('filterStudent').value;
+  const rows = document.querySelectorAll('#topicsTable tbody tr');
+
+  rows.forEach((row) => {
+    const rowYear = row.getAttribute('data-year') || '';
+    const rowStatus = row.getAttribute('data-status') || '';
+    const rowStudent = row.getAttribute('data-student') || '';
+
+    const matchYear = !year || rowYear === year;
+    const matchStatus = !status || rowStatus === status;
+    const matchStudent = !student || rowStudent === student;
+
+    row.style.display = matchYear && matchStatus && matchStudent ? '' : 'none';
+  });
+}
+
+function statusText(status) {
+  const map = {
+    '1': 'Chờ xét duyệt đề xuất',
+    '2': 'Yêu cầu chỉnh sửa đề xuất',
+    '3': 'Đề tài bị từ chối',
+    '4': 'Đang thực hiện',
+    '5': 'Chờ nghiệm thu',
+    '6': 'Sửa báo cáo tổng kết',
+    '7': 'Không đạt',
+    '8': 'Đã hoàn thành'
+  };
+  return map[String(status)] || 'Không xác định';
+}
+
+function showTopicDetail(buttonEl) {
+  const topicId = buttonEl.dataset.topicId;
+  const title = buttonEl.dataset.topicTitle;
+  const status = buttonEl.dataset.topicStatus;
+  const period = buttonEl.dataset.topicPeriod;
+  const year = buttonEl.dataset.topicYear;
+  const author = buttonEl.dataset.topicAuthor;
+  const mssv = buttonEl.dataset.topicMssv;
+  const objective = buttonEl.dataset.topicObjective;
+  const reason = buttonEl.dataset.topicReason;
+
+  const content = document.getElementById('topicDetailContent');
+  content.innerHTML = `
+    <section class="mb-3">
+      <h4 class="fw-bold mb-2">${title}</h4>
+      <p class="mb-1"><strong>Mã đề tài:</strong> #${topicId}</p>
+      <p class="mb-1"><strong>Đợt/Năm học:</strong> ${period} ${year ? '(' + year + ')' : ''}</p>
+      <p class="mb-1"><strong>Tác giả:</strong> ${author || 'N/A'} ${mssv ? '(' + mssv + ')' : ''}</p>
+      <p class="mb-1"><strong>Trạng thái:</strong> ${statusText(status)}</p>
+      <p class="mb-0"><strong>Mục tiêu/Mô tả:</strong> ${objective || 'Chưa cập nhật'}</p>
+    </section>
+    ${reason ? `<div class="alert alert-warning mt-3 mb-0"><strong>Lý do gần nhất:</strong><br>${reason}</div>` : ''}
+  `;
+
+  renderDetailActionButtons(Number(status), Number(topicId));
+}
+
+function renderDetailActionButtons(status, topicId) {
+  const container = document.getElementById('detailActionButtons');
+  if (!container) return;
+
+  if (status === 1 || status === 2) {
+    container.innerHTML = `
+      <form method="post" action="/admin/topic/${topicId}/approve" class="d-inline">
+        <button class="btn btn-success" type="submit">Duyệt đề tài</button>
+      </form>
+      <button class="btn btn-warning" type="button" onclick="openReasonModal('/admin/topic/${topicId}/require-revision')">Yêu cầu sửa</button>
+      <button class="btn btn-danger" type="button" onclick="openReasonModal('/admin/topic/${topicId}/reject')">Từ chối</button>
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+    `;
+    return;
+  }
+
+  if (status === 5 || status === 6) {
+    container.innerHTML = `
+      <form method="post" action="/admin/topic/${topicId}/final-accept" class="d-inline">
+        <button class="btn btn-success" type="submit">Nghiệm thu Đạt</button>
+      </form>
+      <button class="btn btn-warning" type="button" onclick="openReasonModal('/admin/topic/${topicId}/final-require-revision')">Đạt nhưng cần sửa</button>
+      <button class="btn btn-danger" type="button" onclick="openReasonModal('/admin/topic/${topicId}/final-reject')">Không Đạt</button>
+      <button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+    `;
+    return;
+  }
+
+  container.innerHTML = `<button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>`;
+}
+
+let reasonTargetAction = '';
+let reasonModalInstance = null;
+
+function openReasonModal(actionUrl) {
+  reasonTargetAction = actionUrl;
+  document.getElementById('reasonInput').value = '';
+  const modalEl = document.getElementById('reasonModal');
+  reasonModalInstance = reasonModalInstance || new bootstrap.Modal(modalEl);
+  reasonModalInstance.show();
+}
+
+function submitReason() {
+  const reason = document.getElementById('reasonInput').value.trim();
+  if (!reason) {
+    alert('Vui lòng nhập lý do.');
+    return;
+  }
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = reasonTargetAction;
+
+  const reasonInput = document.createElement('input');
+  reasonInput.type = 'hidden';
+  reasonInput.name = 'reason';
+  reasonInput.value = reason;
+  form.appendChild(reasonInput);
+
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

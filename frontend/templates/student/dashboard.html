@@ -1,0 +1,56 @@
+{% extends 'student_layout.html' %}
+{% block title %}Trang chủ{% endblock %}
+{% block content %}
+
+<style>
+  .period-card {
+    border-radius: 0.9rem;
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    border: 1px solid rgba(13, 110, 253, 0.08);
+  }
+  .period-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .period-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 .6rem 1.4rem rgba(13, 110, 253, 0.18) !important;
+  }
+</style>
+
+<div class="p-5 mb-4 bg-primary text-white rounded-3">
+  <div class="container-fluid py-2">
+    <div class="row align-items-center g-4">
+      <div class="col-lg-8">
+        <h1 class="display-6 fw-bold mb-3">Cổng thông tin Nghiên cứu Khoa học Sinh viên</h1>
+        <p class="fs-6 mb-0 opacity-75">
+          Theo dõi đợt đăng ký, nộp hồ sơ đúng hạn và quản lý toàn bộ vòng đời đề tài ngay trên một giao diện thống nhất.
+        </p>
+      </div>
+      <div class="col-lg-4 text-center">
+        <div class="bg-white bg-opacity-10 rounded-3 p-3 d-inline-block">
+          <i class="fas fa-flask-vial" style="font-size: 4.5rem;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mb-5">
+  <h2 class="fw-bold mb-2"><i class="fas fa-calendar-alt me-2 text-primary"></i>Đợt NCKH</h2>
+  <p class="text-muted mb-0">Theo dõi 4 mốc thời gian động do admin cấu hình và trạng thái đợt theo vòng đời thực tế.</p>
+</div>
+
+<div class="row" id="periodsList">
+  <!-- Cards will be rendered here by JS -->
+  <div class="col-12 text-center text-muted py-5">
+    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+    <p>Đang tải dữ liệu...</p>
+  </div>
+</div>
+
+<div id="periodsDataHolder" class="d-none" data-periods='{{ periods_data|tojson|forceescape }}'></div>
+
+{% endblock %}

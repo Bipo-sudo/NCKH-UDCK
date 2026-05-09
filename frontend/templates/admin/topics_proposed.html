@@ -1,0 +1,86 @@
+{% extends 'admin_layout.html' %}
+{% block title %}Xét duyệt Đề tài{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Xét duyệt Đề tài</h1>
+</div>
+
+<div class="content-card">
+  <div class="card-header-custom">
+    <h5>Danh sách đề tài đề xuất</h5>
+    <span class="badge bg-warning text-dark">{{ topics|length }} đề tài chờ duyệt</span>
+  </div>
+  <div class="card-body-custom">
+    <div class="table-responsive">
+      <table class="table table-custom">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Sinh viên</th>
+            <th>GVHD</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in topics %}
+          <tr>
+            <td><strong>#{{ t.id }}</strong></td>
+            <td>
+              <strong>{{ t.ten_de_tai }}</strong>
+              {% if t.mo_ta %}
+              <br><small class="text-muted">{{ t.mo_ta[:100] }}{% if t.mo_ta|length > 100 %}...{% endif %}</small>
+              {% endif %}
+            </td>
+            <td>
+              {{ t.sinh_vien.ho_ten }}<br>
+              <small class="text-muted">{{ t.sinh_vien.mssv }}</small>
+            </td>
+            <td>{{ t.giang_vien_huong_dan or '-' }}</td>
+            <td>
+              <div class="d-flex gap-2 flex-wrap">
+                <form method="post" action="/admin/topic/{{ t.id }}/approve" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-success" onclick="return confirmAction('Duyệt đề tài này?')">
+                    <i class="fas fa-check me-1"></i>Duyệt
+                  </button>
+                </form>
+                <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#revisionModal{{ t.id }}">
+                  <i class="fas fa-edit me-1"></i>Yêu cầu sửa
+                </button>
+                <form method="post" action="/admin/topic/{{ t.id }}/reject" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-danger" onclick="return confirmDelete('Từ chối và xóa đề tài này?')">
+                    <i class="fas fa-times me-1"></i>Từ chối
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Revision Modal -->
+          <div class="modal fade" id="revisionModal{{ t.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <form method="post" action="/admin/topic/{{ t.id }}/require-revision">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Yêu cầu chỉnh sửa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <label class="form-label">Lý do yêu cầu chỉnh sửa</label>
+                    <textarea name="reason" class="form-control" rows="4" placeholder="Nhập lý do cần chỉnh sửa..." required></textarea>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">Gửi yêu cầu</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

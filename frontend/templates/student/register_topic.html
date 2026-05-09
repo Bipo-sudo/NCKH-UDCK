@@ -1,0 +1,208 @@
+{% extends 'student_layout.html' %}
+{% block title %}Đăng ký Đề tài{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+  <h1 class="display-5 fw-bold">
+    <i class="fas fa-file-pen me-3 text-primary"></i>Đăng ký Đề tài NCKH
+  </h1>
+  <p class="lead text-muted">Vui lòng điền đầy đủ các thông tin bên dưới để đăng ký đề tài.</p>
+</div>
+
+<form id="registerTopicForm" method="POST" enctype="multipart/form-data">
+  <div class="row">
+    <div class="col-lg-8">
+      <!-- Section 1: Thông tin đề tài -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Thông tin Đề tài
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="dotDangKy" class="form-label">Đợt đăng ký <span class="text-danger">*</span></label>
+            <input type="text" class="form-control bg-light" id="dotDangKy" name="dot_dang_ky[]" readonly>
+          </div>
+
+          <div class="mb-3">
+            <label for="topicName" class="form-label">Tên đề tài <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="topicName" name="de_tai_ten[]" placeholder="Nhập tên đề tài" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="researchField" class="form-label">Khoa/Lĩnh vực nghiên cứu <span class="text-danger">*</span></label>
+            <select class="form-select" id="researchField" name="linh_vuc[]" required>
+              <option value="">-- Chọn khoa/lĩnh vực --</option>
+              <option value="CNTT">Công nghệ Thông tin</option>
+              <option value="KINH_TE">Kinh tế</option>
+              <option value="NONG_NGHIEP">Nông nghiệp</option>
+              <option value="NGOAI_NGU">Ngoại ngữ</option>
+              <option value="LUAT">Luật</option>
+              <option value="DIEN_DIEN_TU">Điện - Điện tử</option>
+              <option value="CO_KHI">Cơ khí</option>
+              <option value="XAY_DUNG">Xây dựng</option>
+              <option value="HOA_HOC">Hóa học</option>
+              <option value="SINH_HOC">Sinh học</option>
+              <option value="GIAO_DUC">Giáo dục</option>
+              <option value="Y_TE">Y tế</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="researchGoal" class="form-label">Mục tiêu nghiên cứu <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="researchGoal" name="muc_tieu_nghien_cuu[]" rows="5" placeholder="Mô tả mục tiêu và nội dung chính của đề tài..." required></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Giảng viên hướng dẫn -->
+      <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-chalkboard-user me-2"></i>Giảng viên Hướng dẫn (GVHD)
+          </h5>
+          <button type="button" id="btnAddTeacher" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus me-1"></i>Thêm GVHD
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="teacherContainer">
+            <!-- Teacher input 1 (Default) -->
+            <div class="teacher-row mb-3">
+              <div class="input-group">
+                <input type="text" class="form-control" placeholder="Nhập tên giảng viên hướng dẫn" name="gvhd_ten[]" required>
+                <span class="input-group-text text-muted">GVHD 1</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Nhóm tác giả -->
+      <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>Nhóm tác giả (Sinh viên)
+          </h5>
+          <button type="button" id="btnAddStudent" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-plus me-1"></i>Thêm tác giả
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="studentContainer">
+            <!-- Student 1 (Current user - Auto-filled, NOT readonly) -->
+            <div class="student-row border p-3 mb-3 rounded position-relative">
+              <!-- Dòng 1: Thông tin học tập -->
+              <div class="row mb-3">
+                <div class="col-md-3 mb-2">
+                  <label class="form-label text-muted small">Họ và Tên <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-name" name="tac_gia_ten[]" placeholder="Nguyễn Văn A" required>
+                </div>
+                <div class="col-md-2 mb-2">
+                  <label class="form-label text-muted small">Mã SV <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-mssv" name="tac_gia_mssv[]" placeholder="K23TT0001" required>
+                </div>
+                <div class="col-md-2 mb-2">
+                  <label class="form-label text-muted small">Lớp <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-class" name="tac_gia_lop[]" placeholder="K23TT" required>
+                </div>
+                <div class="col-md-2 mb-2">
+                  <label class="form-label text-muted small">Khóa <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-khoa" name="tac_gia_khoa[]" placeholder="2023" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                  <label class="form-label text-muted small">Khoa <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-faculty" name="tac_gia_khoa_vien[]" placeholder="CNTT" required>
+                </div>
+              </div>
+
+              <!-- Dòng 2: Thông tin liên lạc -->
+              <div class="row mb-3">
+                <div class="col-md-2 mb-2">
+                  <label class="form-label text-muted small">Ngày sinh <span class="text-danger">*</span></label>
+                  <input type="date" class="form-control student-dob" name="tac_gia_ngay_sinh[]" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                  <label class="form-label text-muted small">Số điện thoại <span class="text-danger">*</span></label>
+                  <input type="tel" class="form-control student-phone" name="tac_gia_so_dien_thoai[]" placeholder="0987654321" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                  <label class="form-label text-muted small">Email <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control student-email" name="tac_gia_email[]" placeholder="nguyenvana@udn.vn" required>
+                </div>
+                <div class="col-md-4 mb-2">
+                  <label class="form-label text-muted small">Địa chỉ <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control student-address" name="tac_gia_dia_chi[]" placeholder="123 Đường ABC, Quận 1" required>
+                </div>
+              </div>
+
+              <!-- Dòng 3: Tệp đính kèm + Badge -->
+              <div class="row align-items-end">
+                <div class="col-md-4 mb-2">
+                  <label class="form-label text-muted small">Ảnh thẻ 3x4 <span class="text-danger">*</span></label>
+                  <input type="file" class="form-control student-photo" name="tac_gia_anh_the[]" accept="image/*" required>
+                  <small class="text-muted d-block mt-1">Hỗ trợ: JPG, PNG (Tối đa 5MB)</small>
+                </div>
+                <div class="col-md-8 mb-2">
+                  <div class="badge bg-success">Chủ nhiệm đề tài</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Tệp đính kèm -->
+      <div class="card mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i class="fas fa-paperclip me-2"></i>Tệp Đính kèm
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="thuyetMinh" class="form-label">Tệp Thuyết minh <span class="text-danger">*</span></label>
+            <input type="file" class="form-control" id="thuyetMinh" name="thuyet_minh[]" accept=".pdf,.docx,.doc" multiple required>
+            <small class="text-muted d-block mt-2">
+              <i class="fas fa-info-circle me-1"></i>Chọn các tệp đính kèm (PDF, DOCX - tối đa 10MB mỗi tệp)
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="d-grid gap-2 mb-5">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="fas fa-paper-plane me-2"></i>Gửi Đăng ký
+        </button>
+        <a href="/student/" class="btn btn-outline-secondary">
+          <i class="fas fa-arrow-left me-2"></i>Quay lại
+        </a>
+      </div>
+    </div>
+
+    <!-- Sidebar: Hướng dẫn -->
+    <div class="col-lg-4">
+      <div class="card bg-light">
+        <div class="card-header">
+          <h5 class="mb-0">
+            <i class="fas fa-lightbulb me-2"></i>Hướng dẫn
+          </h5>
+        </div>
+        <div class="card-body small">
+          <p class="mb-2"><strong>Thông tin đề tài:</strong> Điền đầy đủ tên, lĩnh vực và mục tiêu của đề tài.</p>
+          <p class="mb-2"><strong>GVHD:</strong> Có thể thêm nhiều giảng viên hướng dẫn bằng nút "+ Thêm GVHD".</p>
+          <p class="mb-2"><strong>Tác giả:</strong> Bạn là chủ nhiệm. Có thể thêm các thành viên khác của nhóm.</p>
+          <p class="mb-0"><strong>Tệp:</strong> Nộp thuyết minh (PDF/DOCX) mô tả chi tiết đề tài.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/register_topic.js') }}"></script>
+{% endblock %}
