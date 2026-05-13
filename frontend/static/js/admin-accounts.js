@@ -17,7 +17,8 @@ function adminAccountsInit() {
         return [];
       }
       const data = await resp.json();
-      currentAccounts = Array.isArray(data) ? data : [];
+      const accounts = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+      currentAccounts = accounts;
       filteredAccounts = [...currentAccounts];
       return currentAccounts;
     } catch (err) {
@@ -263,6 +264,8 @@ function adminAccountsInit() {
     const form = document.getElementById('accountForm');
     if (form) form.reset();
     if (editId) editId.value = '';
+    const roleInput = document.getElementById('accountRole');
+    if (roleInput) roleInput.value = 'student';
 
     const passwordInput = document.getElementById('passwordInput');
     if (passwordInput) passwordInput.value = '123456';
@@ -288,12 +291,13 @@ function adminAccountsInit() {
     setValue('accountEditId', account.id);
     setValue('accountUsername', account.username);
     setValue('accountEmail', account.email);
-    setValue('passwordInput', '123456');
+    setValue('passwordInput', '');
     setValue('mssvInput', account.mssv);
     setValue('accountClass', account.lop);
     setValue('accountFullName', account.ho_ten);
     setValue('accountFaculty', account.khoa);
     setValue('accountKhoaHoc', account.khoa_hoc);
+    setValue('accountRole', account.role || 'student');
   }
 
   function saveAccountFromModal() {
@@ -305,6 +309,7 @@ function adminAccountsInit() {
     const hoTen = document.getElementById('accountFullName')?.value?.trim() || '';
     const khoa = document.getElementById('accountFaculty')?.value?.trim() || '';
     const khoaHoc = document.getElementById('accountKhoaHoc')?.value?.trim() || '';
+    const role = document.getElementById('accountRole')?.value?.trim() || 'student';
 
     if (!username || !email || !mssv || !lop) {
       alert('Vui lòng nhập đủ các trường bắt buộc: Username, Email, MSSV, Lớp.');
@@ -319,9 +324,15 @@ function adminAccountsInit() {
       ho_ten: hoTen,
       khoa,
       khoa_hoc: khoaHoc,
-      password: document.getElementById('passwordInput')?.value?.trim() || '123456',
-      role: 'student',
+      role,
     };
+
+    const passwordValue = document.getElementById('passwordInput')?.value?.trim() || '';
+    if (!editId) {
+      payload.password = passwordValue || '123456';
+    } else if (passwordValue) {
+      payload.password = passwordValue;
+    }
 
     const url = editId ? `/api/accounts/${editId}` : '/api/accounts';
     const method = editId ? 'PUT' : 'POST';
@@ -404,7 +415,7 @@ function adminAccountsInit() {
 
   window.resetPasswordAccount = function (id) {
     fetch(`/api/accounts/${id}/reset-password`, {
-      method: 'POST',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: '123456' }),
     }).then(async function (response) {
@@ -412,6 +423,7 @@ function adminAccountsInit() {
       return response.json();
     }).then(function () {
       alert('Đã reset mật khẩu');
+      return fetchAccounts();
     }).catch(function () {
       alert('Reset mật khẩu thất bại.');
     });

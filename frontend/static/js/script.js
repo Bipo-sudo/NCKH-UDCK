@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
       (path === '/admin/' || path === '/admin')
         ? (dataPage === 'admin_dashboard.html')
         : (path.includes('/periods') && dataPage === 'admin_periods.html') ||
-          (path.includes('/topics') && dataPage === 'admin_topics.html') ||
+          (path.includes('/topics') && dataPage === 'topics') ||
           (path.includes('/accounts') && dataPage === 'admin_accounts.html') ||
           (path.includes('/scoring') && dataPage === 'admin_scoring.html');
 

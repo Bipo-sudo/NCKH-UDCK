@@ -115,8 +115,11 @@ def seed_initial_data():
             mo_ta="Lộ trình NCKH theo năm học được cấu hình động bằng 4 mốc thời gian.",
             thoi_gian_thong_bao=datetime(2025, 9, 15, 8, 0, 0),
             thoi_gian_mo_dang_ky=datetime(2025, 10, 1, 8, 0, 0),
-            han_nop_de_cuong=datetime(2025, 12, 31, 23, 59, 59),
+            han_dang_ky=datetime(2025, 12, 31, 23, 59, 59),
+            thoi_gian_mo_nop_bao_cao=datetime(2026, 1, 1, 8, 0, 0),
             han_nop_bao_cao=datetime(2026, 6, 30, 23, 59, 59),
+            thoi_gian_bat_dau_bao_ve=datetime(2026, 7, 1, 8, 0, 0),
+            han_bao_ve=datetime(2026, 7, 7, 23, 59, 59),
             cap_bac="Cấp Trường",
             trang_thai_dot=2,
             file_dinh_kem="/uploads/thong_bao/nam_hoc_2025_2026_nckh.pdf",
@@ -132,8 +135,11 @@ def seed_initial_data():
             mo_ta="Năm học trước dùng cho dữ liệu thống kê và đối chiếu.",
             thoi_gian_thong_bao=datetime(2024, 9, 15, 8, 0, 0),
             thoi_gian_mo_dang_ky=datetime(2024, 10, 1, 8, 0, 0),
-            han_nop_de_cuong=datetime(2024, 12, 31, 23, 59, 59),
+            han_dang_ky=datetime(2024, 12, 31, 23, 59, 59),
+            thoi_gian_mo_nop_bao_cao=datetime(2025, 1, 1, 8, 0, 0),
             han_nop_bao_cao=datetime(2025, 6, 30, 23, 59, 59),
+            thoi_gian_bat_dau_bao_ve=datetime(2025, 7, 1, 8, 0, 0),
+            han_bao_ve=datetime(2025, 7, 7, 23, 59, 59),
             cap_bac="Cấp Trường",
             trang_thai_dot=4,
             file_dinh_kem="/uploads/thong_bao/nam_hoc_2024_2025_nckh.pdf",
@@ -197,7 +203,7 @@ def seed_initial_data():
             "file_bao_cao": None,
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": True
+            # legacy field `da_ky_hop_dong` removed
         },
         
         # 2. Đã nộp báo cáo sớm, chờ nghiệm thu (Trạng thái 5)
@@ -217,7 +223,7 @@ def seed_initial_data():
             "file_bao_cao": '["/uploads/app_baocao_final.pdf"]',
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": True
+            # legacy field `da_ky_hop_dong` removed
         },
         
         # 3. Nộp báo cáo sớm nhưng bị yêu cầu sửa lại (Trạng thái 6)
@@ -237,7 +243,7 @@ def seed_initial_data():
             "file_bao_cao": '["/uploads/iot_baocao_v1.pdf"]',
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": True
+            # legacy field `da_ky_hop_dong` removed
         },
 
         # ==========================================
@@ -261,7 +267,7 @@ def seed_initial_data():
             "file_bao_cao": None,
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": False
+            # legacy field `da_ky_hop_dong` removed
         },
         
         # 5. Quá hạn: Bị yêu cầu sửa đề cương từ T11/2025 nhưng bỏ ngang (Trạng thái 2)
@@ -281,7 +287,7 @@ def seed_initial_data():
             "file_bao_cao": None,
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": False
+            # legacy field `da_ky_hop_dong` removed
         },
         
         # 6. Đã chết: Bị từ chối duyệt đề cương thẳng tay (Trạng thái 3)
@@ -301,7 +307,7 @@ def seed_initial_data():
             "file_bao_cao": None,
             "cap_giai_thuong": None,
             "xep_loai_giai": None,
-            "da_ky_hop_dong": False
+            # legacy field `da_ky_hop_dong` removed
         }
     ]
 

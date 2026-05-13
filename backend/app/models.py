@@ -29,25 +29,18 @@ def _safe_json_list(value):
 
 
 class TopicStatus:
-    CHO_DUYET_DE_CUONG = 1
-    SUA_DE_CUONG = 2
-    BI_TU_CHOI = 3
-    DANG_TRIEN_KHAI = 4
-    CHO_BAO_VE = 5
-    SUA_SAU_BAO_VE = 6
-    KHONG_DAT = 7
-    NGHIEM_THU_THANH_CONG = 8
-
-    CHO_DUYET_DE_XUAT = CHO_DUYET_DE_CUONG
-    SUA_DE_XUAT = SUA_DE_CUONG
-    DANG_THUC_HIEN = DANG_TRIEN_KHAI
-    CHO_NGHIEM_THU = CHO_BAO_VE
-    SUA_BAO_CAO = SUA_SAU_BAO_VE
-    HOAN_THANH = NGHIEM_THU_THANH_CONG
-
-    CHO_XET_DUYET = CHO_DUYET_DE_CUONG
-    YEU_CAU_CHINH_SUA = SUA_DE_CUONG
-    DA_HOAN_THANH = NGHIEM_THU_THANH_CONG
+    CHO_DUYET_DE_XUAT = 1
+    SUA_DE_XUAT = 2
+    DA_DUYET = 3
+    KHONG_DUYET = 4
+    THUC_HIEN = 5
+    CHUA_NOP_BAO_CAO = 6
+    DA_NOP_BAO_CAO = 7
+    SUA_BAO_CAO = 8
+    CHO_BAO_VE = 9
+    HOAN_THANH = 10
+    KHONG_THANH_CONG = 11
+    BI_HUY = 12
 
 
 class Account(UserMixin, db.Model):
@@ -179,7 +172,12 @@ class Period(db.Model):
     mo_ta = db.Column(db.Text, nullable=True)
     thoi_gian_thong_bao = db.Column(db.DateTime, nullable=False)
     thoi_gian_mo_dang_ky = db.Column(db.DateTime, nullable=False)
-    han_nop_de_cuong = db.Column(db.DateTime, nullable=False)
+    # renamed: end of registration window
+    han_dang_ky = db.Column(db.DateTime, nullable=True)
+    # new timeline fields for unified 6-phase lifecycle
+    thoi_gian_mo_nop_bao_cao = db.Column(db.DateTime, nullable=True)
+    thoi_gian_bat_dau_bao_ve = db.Column(db.DateTime, nullable=True)
+    han_bao_ve = db.Column(db.DateTime, nullable=True)
     han_nop_bao_cao = db.Column(db.DateTime, nullable=False)
     cap_bac = db.Column(db.String(20), nullable=False, default="Cấp Trường")
     trang_thai_dot = db.Column(db.Integer, nullable=True)
@@ -189,13 +187,57 @@ class Period(db.Model):
 
     def compute_trang_thai_dot(self, now: datetime | None = None) -> int:
         now = now or datetime.utcnow()
-        if now < self.thoi_gian_mo_dang_ky:
+        # Phases (1..6):
+        # 1: Đăng ký (thoi_gian_mo_dang_ky -> han_dang_ky)
+        # 2: Đang thực hiện (han_dang_ky -> thoi_gian_mo_nop_bao_cao)
+        # 3: Nghiệm thu (thoi_gian_mo_nop_bao_cao -> han_nop_bao_cao)
+        # 4: Kết thúc (han_nop_bao_cao -> thoi_gian_bat_dau_bao_ve)
+        # 5: Bảo vệ (thoi_gian_bat_dau_bao_ve -> han_bao_ve)
+        # 6: Hoàn thành (> han_bao_ve)
+
+        # If any critical boundary is missing, fall back to best-effort ordering.
+        open_reg = self.thoi_gian_mo_dang_ky
+        end_reg = getattr(self, 'han_dang_ky', None)
+        open_report = getattr(self, 'thoi_gian_mo_nop_bao_cao', None)
+        end_report = self.han_nop_bao_cao
+        start_defense = getattr(self, 'thoi_gian_bat_dau_bao_ve', None)
+        end_defense = getattr(self, 'han_bao_ve', None)
+
+        # Phase 1: registration window
+        if open_reg and end_reg and now >= open_reg and now < end_reg:
             return 1
-        if now < self.han_nop_de_cuong:
+
+        # Phase 2: between end of registration and report submission opening
+        if end_reg and open_report and now >= end_reg and now < open_report:
             return 2
-        if now < self.han_nop_bao_cao:
+
+        # Phase 3: report submission window
+        if open_report and end_report and now >= open_report and now < end_report:
             return 3
-        return 4
+
+        # Phase 4: between report deadline and defense start (admin review)
+        if end_report and start_defense and now >= end_report and now < start_defense:
+            return 4
+
+        # Phase 5: defense window
+        if start_defense and end_defense and now >= start_defense and now < end_defense:
+            return 5
+
+        # Phase 6: after defense end
+        if end_defense and now >= end_defense:
+            return 6
+
+        # Best-effort fallbacks (if some dates are missing)
+        if open_reg and now < open_reg:
+            return 1
+        if end_reg and now < end_reg:
+            return 1
+        if open_report and now < open_report:
+            return 2
+        if end_report and now < end_report:
+            return 3
+
+        return 6
 
     def sync_trang_thai_dot(self, now: datetime | None = None) -> int:
         self.trang_thai_dot = self.compute_trang_thai_dot(now)
@@ -207,31 +249,13 @@ class Period(db.Model):
 
     @property
     def thoi_gian_trien_khai(self) -> str:
-        return f"{self.han_nop_de_cuong:%d/%m/%Y %H:%M} - {self.han_nop_bao_cao:%d/%m/%Y %H:%M}"
+        try:
+            start = self.thoi_gian_mo_dang_ky
+            end = self.han_bao_ve
+            return f"{start:%d/%m/%Y %H:%M} - {end:%d/%m/%Y %H:%M}"
+        except Exception:
+            return ""
 
-    @hybrid_property
-    def han_nop_de_xuat(self):
-        return self.han_nop_de_cuong
-
-    @han_nop_de_xuat.setter
-    def han_nop_de_xuat(self, value):
-        self.han_nop_de_cuong = value
-
-    @hybrid_property
-    def han_dang_ky(self):
-        return self.thoi_gian_mo_dang_ky
-
-    @han_dang_ky.setter
-    def han_dang_ky(self, value):
-        self.thoi_gian_mo_dang_ky = value
-
-    @hybrid_property
-    def han_bao_ve(self):
-        return self.han_nop_bao_cao
-
-    @han_bao_ve.setter
-    def han_bao_ve(self, value):
-        self.han_nop_bao_cao = value
 
     @property
     def ten_trang_thai_dot(self) -> str:
@@ -257,8 +281,11 @@ class Period(db.Model):
             "capBac": self.cap_bac or "Cấp Trường",
             "thoiGianThongBao": _dt_to_iso(self.thoi_gian_thong_bao),
             "thoiGianMoDangKy": _dt_to_iso(self.thoi_gian_mo_dang_ky),
-            "hanNopDeCuong": _dt_to_iso(self.han_nop_de_cuong),
+            "hanDangKy": _dt_to_iso(self.han_dang_ky),
+            "thoiGianMoNopBaoCao": _dt_to_iso(getattr(self, 'thoi_gian_mo_nop_bao_cao', None)),
             "hanNopBaoCao": _dt_to_iso(self.han_nop_bao_cao),
+            "thoiGianBatDauBaoVe": _dt_to_iso(getattr(self, 'thoi_gian_bat_dau_bao_ve', None)),
+            "hanBaoVe": _dt_to_iso(getattr(self, 'han_bao_ve', None)),
             "trangThaiDot": status,
             "trang_thai_dot": status,
             "file_dinh_kem": self.file_dinh_kem,
@@ -292,7 +319,6 @@ class Topic(db.Model):
     file_thuyet_minh = db.Column(db.Text, nullable=True)
     cap_giai_thuong = db.Column(db.String(50), nullable=True)
     xep_loai_giai = db.Column(db.String(30), nullable=True)
-    da_ky_hop_dong = db.Column(db.Boolean, nullable=False, default=False)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -315,46 +341,6 @@ class Topic(db.Model):
         viewonly=True,
         lazy=True,
     )
-
-    @hybrid_property
-    def sinh_vien_id(self) -> int:
-        return self.chu_nhiem_id
-
-    @sinh_vien_id.setter
-    def sinh_vien_id(self, value: int) -> None:
-        self.chu_nhiem_id = value
-
-    @sinh_vien_id.expression
-    def sinh_vien_id(cls):
-        return cls.chu_nhiem_id
-
-    @hybrid_property
-    def dot_dang_ky_id(self) -> int:
-        return self.dot_id
-
-    @dot_dang_ky_id.setter
-    def dot_dang_ky_id(self, value: int) -> None:
-        self.dot_id = value
-
-    @dot_dang_ky_id.expression
-    def dot_dang_ky_id(cls):
-        return cls.dot_id
-
-    @hybrid_property
-    def giang_vien_huong_dan(self):
-        return self.giang_vien_hd
-
-    @giang_vien_huong_dan.setter
-    def giang_vien_huong_dan(self, value):
-        self.giang_vien_hd = value
-
-    @hybrid_property
-    def mo_ta(self):
-        return self.muc_tieu
-
-    @mo_ta.setter
-    def mo_ta(self, value):
-        self.muc_tieu = value
 
     def to_dict(self, include_related: bool = True):
         period = self.dot
@@ -434,7 +420,6 @@ class Topic(db.Model):
             "file_thuyet_minh": _safe_json_list(self.file_thuyet_minh),
             "cap_giai_thuong": self.cap_giai_thuong,
             "xep_loai_giai": self.xep_loai_giai,
-            "da_ky_hop_dong": self.da_ky_hop_dong,
             "created_at": _dt_to_iso(self.created_at),
             "updated_at": _dt_to_iso(self.updated_at),
             "year": period_name,

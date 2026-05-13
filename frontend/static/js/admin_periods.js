@@ -1,6 +1,5 @@
 function adminPeriodsInit() {
   const periodsHolder = document.getElementById('periodsDataHolder');
-  // Fetch periods from backend. No mock data is used here.
   let currentPeriods = [];
 
   function displayStatusMessage(message, colspan = 8) {
@@ -29,15 +28,23 @@ function adminPeriodsInit() {
 
   const tableBody = document.getElementById('periodsTableBody');
   const filterYear = document.getElementById('filterYear');
+  
+  // Khai báo các field thông tin chung
   const tenDotInput = document.getElementById('ten_dot');
   const namHocInput = document.getElementById('nam_hoc');
   const capBacInput = document.getElementById('cap_bac');
   const periodDetail = document.getElementById('periodDetail');
-  const thoiGianThongBao = document.getElementById('thoiGianThongBao');
-  const thoiGianMoDangKy = document.getElementById('thoiGianMoDangKy');
-  const hanNopDeCuong = document.getElementById('hanNopDeCuong');
-  const hanNopBaoCao = document.getElementById('hanNopBaoCao');
   const periodAttachment = document.getElementById('periodAttachment');
+  
+  // Khai báo đúng ID của 7 mốc thời gian từ form HTML mới
+  const timeThongBao = document.getElementById('timeThongBao');
+  const timeMoDangKy = document.getElementById('timeMoDangKy');
+  const timeHanDangKy = document.getElementById('timeHanDangKy');
+  const timeMoNopBaoCao = document.getElementById('timeMoNopBaoCao');
+  const timeHanNopBaoCao = document.getElementById('timeHanNopBaoCao');
+  const timeBatDauBaoVe = document.getElementById('timeBatDauBaoVe');
+  const timeHanBaoVe = document.getElementById('timeHanBaoVe');
+  
   const savePeriodBtn = document.getElementById('savePeriodBtn');
   const addPeriodModalEl = document.getElementById('addPeriodModal');
 
@@ -85,39 +92,33 @@ function adminPeriodsInit() {
   }
 
   function getStatusBadge(status) {
-    if (status === 1) {
-      return '<span class="badge text-bg-secondary">Chưa mở đăng ký</span>';
-    }
-    if (status === 2) {
-      return '<span class="badge text-bg-success">Đang mở đăng ký</span>';
-    }
-    if (status === 3) {
-      return '<span class="badge text-bg-warning text-dark">Đang nộp báo cáo</span>';
-    }
-    return '<span class="badge text-bg-dark">Đã đóng đăng ký</span>';
+    if (status === 1) return '<span class="badge text-bg-secondary">Đăng ký</span>';
+    if (status === 2) return '<span class="badge text-bg-info">Đang thực hiện</span>';
+    if (status === 3) return '<span class="badge text-bg-warning text-dark">Nghiệm thu</span>';
+    if (status === 4) return '<span class="badge text-bg-primary">Kết thúc</span>';
+    if (status === 5) return '<span class="badge text-bg-danger">Bảo vệ</span>';
+    if (status === 6) return '<span class="badge text-bg-success">Hoàn thành</span>';
+    return '<span class="badge text-bg-dark">Không xác định</span>';
   }
 
-  function getButtonBadge(status) {
-    if (status === 2) {
-      return '<a href="/student/register-topic" class="btn btn-success mt-3"><i class="fas fa-check-circle me-2"></i>Đăng ký tham gia</a>';
-    }
-    if (status === 1) {
-      return '<button class="btn btn-outline-secondary mt-3" disabled><i class="fas fa-lock me-2"></i>Chưa mở đăng ký</button>';
-    }
-    return '<button class="btn btn-outline-secondary mt-3" disabled><i class="fas fa-lock me-2"></i>Đã đóng đăng ký</button>';
-  }
-
+  // Thuật toán kiểm tra 7 mốc thời gian phải tăng dần
   function validateDateOrder(showAlert = true) {
-    if (!thoiGianThongBao.value || !thoiGianMoDangKy.value || !hanNopDeCuong.value || !hanNopBaoCao.value) {
-      if (showAlert) alert('Vui lòng nhập đủ 4 mốc thời gian.');
+    const dates = [
+      timeThongBao?.value, timeMoDangKy?.value, timeHanDangKy?.value,
+      timeMoNopBaoCao?.value, timeHanNopBaoCao?.value, timeBatDauBaoVe?.value, timeHanBaoVe?.value
+    ];
+
+    if (dates.some(d => !d)) {
+      if (showAlert) alert('Vui lòng nhập đầy đủ 7 mốc thời gian.');
       return false;
     }
 
-    if (!(thoiGianThongBao.value <= thoiGianMoDangKy.value && thoiGianMoDangKy.value <= hanNopDeCuong.value && hanNopDeCuong.value <= hanNopBaoCao.value)) {
-      if (showAlert) alert('Các mốc phải theo thứ tự: thông báo <= mở đăng ký <= nộp đề cương <= nộp báo cáo.');
-      return false;
+    for (let i = 0; i < dates.length - 1; i++) {
+      if (dates[i] >= dates[i+1]) {
+         if (showAlert) alert(`Lỗi logic thời gian: Mốc số ${i+2} phải diễn ra SAU mốc số ${i+1}.`);
+         return false;
+      }
     }
-
     return true;
   }
 
@@ -126,36 +127,32 @@ function adminPeriodsInit() {
 
     data.forEach(function (item) {
       const status = Number(item.trangThaiDot ?? item.trang_thai_dot ?? 0);
-      const canDelete = status <= 1;
+      const canDelete = status <= 1; // Chỉ cho xóa nếu đợt chưa tiến hành sâu
       rowsHtml += `
         <tr>
           <td>
             <strong>${getPeriodTitleValue(item)}</strong>
             <div class="small text-muted mt-1">${getSchoolYearValue(item)}</div>
-            ${item.chiTiet ? `<div class="small text-muted mt-1">${item.chiTiet}</div>` : ''}
+            ${item.mo_ta || item.chiTiet ? `<div class="small text-muted mt-1">${item.mo_ta || item.chiTiet}</div>` : ''}
             <div class="mt-2">
-              <button
-                type="button"
-                class="btn btn-sm btn-danger"
-                onclick="deletePeriod(${item.id})"
+              <button type="button" class="btn btn-sm btn-danger" onclick="deletePeriod(${item.id})"
                 ${canDelete ? '' : 'disabled'}
-                title="${canDelete ? 'Xóa đợt' : 'Không thể xóa đợt đã bắt đầu hoạt động'}"
-              >
+                title="${canDelete ? 'Xóa đợt' : 'Không thể xóa đợt đã bắt đầu hoạt động'}">
                 <i class="fas fa-trash me-1"></i>Xóa
               </button>
             </div>
           </td>
           <td><span class="badge ${getPeriodLevelValue(item) === 'Cấp Trường' ? 'bg-success' : getPeriodLevelValue(item) === 'Cấp Khoa' ? 'bg-secondary' : 'bg-primary'}">${getPeriodLevelValue(item)}</span></td>
-          <td>${formatDateTime(item.thoiGianThongBao)}</td>
-          <td>${formatDateTime(item.thoiGianMoDangKy)}</td>
-          <td>${formatDateTime(item.hanNopDeCuong)}</td>
-          <td>${formatDateTime(item.hanNopBaoCao)}</td>
+          <td>${formatDateTime(item.thoiGianThongBao ?? item.thoi_gian_thong_bao)}</td>
+          <td>${formatDateTime(item.thoiGianMoDangKy ?? item.thoi_gian_mo_dang_ky)}</td>
+          <td>${formatDateTime(item.hanDangKy ?? item.han_dang_ky)}</td>
+          <td>${formatDateTime(item.hanNopBaoCao ?? item.han_nop_bao_cao)}</td>
           <td>
-            ${item.tepDinhKem?.fileName
-              ? `<a href="${item.tepDinhKem.url}" target="_blank">${item.tepDinhKem.fileName}</a>`
+            ${item.tepDinhKem?.fileName || item.file_dinh_kem
+              ? `<a href="${item.tepDinhKem?.url || item.file_dinh_kem}" target="_blank">Xem tệp</a>`
               : '<span class="text-muted">Không có tệp</span>'}
           </td>
-          <td>${getStatusBadge(item.trangThaiDot)}</td>
+          <td>${getStatusBadge(status)}</td>
         </tr>
       `;
     });
@@ -183,23 +180,20 @@ function adminPeriodsInit() {
     renderByCurrentFilter();
   });
 
-  [thoiGianThongBao, thoiGianMoDangKy, hanNopDeCuong, hanNopBaoCao].forEach(function (input) {
-    if (input) {
-      input.min = toDateTimeLocalValue(new Date());
-    }
+  // Tự động gán thuộc tính min cho 7 mốc thời gian (Cascading Min Date)
+  const timeInputs = [timeThongBao, timeMoDangKy, timeHanDangKy, timeMoNopBaoCao, timeHanNopBaoCao, timeBatDauBaoVe, timeHanBaoVe];
+  
+  timeInputs.forEach(input => {
+    if (input) input.min = toDateTimeLocalValue(new Date());
   });
 
-  thoiGianThongBao?.addEventListener('change', function () {
-    thoiGianMoDangKy.min = thoiGianThongBao.value || toDateTimeLocalValue(new Date());
-  });
-
-  thoiGianMoDangKy?.addEventListener('change', function () {
-    hanNopDeCuong.min = thoiGianMoDangKy.value || toDateTimeLocalValue(new Date());
-  });
-
-  hanNopDeCuong?.addEventListener('change', function () {
-    hanNopBaoCao.min = hanNopDeCuong.value || toDateTimeLocalValue(new Date());
-  });
+  for(let i = 0; i < timeInputs.length - 1; i++) {
+      if(timeInputs[i] && timeInputs[i+1]) {
+          timeInputs[i].addEventListener('change', function() {
+              timeInputs[i+1].min = timeInputs[i].value || toDateTimeLocalValue(new Date());
+          });
+      }
+  }
 
   savePeriodBtn.addEventListener('click', function () {
     const tenDot = tenDotInput.value.trim();
@@ -207,18 +201,13 @@ function adminPeriodsInit() {
     const capBac = capBacInput?.value.trim() || 'Cấp Trường';
     const chiTiet = periodDetail.value.trim();
 
-    if (!tenDot) {
-      alert('Vui lòng nhập tên đợt NCKH.');
-      return;
-    }
-
-    if (!namHoc) {
-      alert('Vui lòng nhập năm học.');
+    if (!tenDot || !namHoc) {
+      alert('Vui lòng nhập Tên đợt và Năm học.');
       return;
     }
 
     if (!isValidSchoolYear(namHoc)) {
-      alert('Năm học phải đúng định dạng 2024-2025.');
+      alert('Năm học phải đúng định dạng, ví dụ: 2024-2025.');
       return;
     }
 
@@ -226,15 +215,19 @@ function adminPeriodsInit() {
       return;
     }
 
+    // Đóng gói Payload chứa đúng 7 mốc thời gian để gửi xuống Backend
     const payload = {
       ten_dot: tenDot,
       nam_hoc: namHoc,
       cap_bac: capBac,
       mo_ta: chiTiet,
-      thoi_gian_thong_bao: thoiGianThongBao.value,
-      thoi_gian_mo_dang_ky: thoiGianMoDangKy.value,
-      han_nop_de_cuong: hanNopDeCuong.value,
-      han_nop_bao_cao: hanNopBaoCao.value,
+      thoi_gian_thong_bao: timeThongBao.value,
+      thoi_gian_mo_dang_ky: timeMoDangKy.value,
+      han_dang_ky: timeHanDangKy.value,
+      thoi_gian_mo_nop_bao_cao: timeMoNopBaoCao.value,
+      han_nop_bao_cao: timeHanNopBaoCao.value,
+      thoi_gian_bat_dau_bao_ve: timeBatDauBaoVe.value,
+      han_bao_ve: timeHanBaoVe.value,
       file_dinh_kem: periodAttachment.files && periodAttachment.files[0] ? `/uploads/thong_bao/${periodAttachment.files[0].name}` : null,
     };
 
@@ -252,46 +245,34 @@ function adminPeriodsInit() {
         let message = 'Không lưu được đợt NCKH';
         try {
           const err = await response.json();
-          if (err && err.error) {
-            message = err.error;
-          }
-        } catch (error) {
-          // Keep default message when error payload is not JSON.
-        }
+          if (err && err.message) message = err.message;
+          else if (err && err.error) message = err.error;
+        } catch (error) {}
         throw new Error(message);
       }
       return response.json();
-    }).then(async function () {
-      const modalEl = document.getElementById('periodModal') || document.getElementById('addPeriodModal');
-      const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-      if (modalInstance) {
-        modalInstance.hide();
+    }).then(async function (data) {
+      if (addPeriodModal) addPeriodModal.hide();
+      alert('Thành công: ' + (data.message || 'Lưu đợt NCKH thành công!'));
+      
+      // Xóa form sau khi tạo thành công
+      if(!isEditing) {
+          tenDotInput.value = ''; namHocInput.value = ''; periodDetail.value = '';
+          timeInputs.forEach(input => input.value = '');
       }
-      alert('Lưu đợt thành công!');
+
       await fetchPeriods();
       renderByCurrentFilter();
     }).catch(function (error) {
-      alert(error.message || 'Không thể lưu đợt mới. Vui lòng thử lại.');
+      alert('Lỗi: ' + error.message);
     });
   });
 
   async function deletePeriod(id) {
     const periodId = Number(id);
-    if (!periodId) {
-      alert('Đợt không hợp lệ.');
-      return;
-    }
+    if (!periodId) return;
 
-    const period = (currentPeriods || []).find(function (item) {
-      return Number(item.id) === periodId;
-    });
-    const status = Number(period?.trangThaiDot ?? period?.trang_thai_dot ?? 0);
-    if (status > 1) {
-      alert('Không thể xóa đợt đã bắt đầu hoạt động');
-      return;
-    }
-
-    if (!confirm('Bạn có chắc chắn muốn xóa đợt này?')) {
+    if (!confirm('Bạn có chắc chắn muốn xóa đợt NCKH này? Toàn bộ đề tài thuộc đợt này cũng có thể bị ảnh hưởng!')) {
       return;
     }
 
@@ -301,12 +282,8 @@ function adminPeriodsInit() {
         let message = 'Không thể xóa đợt.';
         try {
           const err = await resp.json();
-          if (err && err.error) {
-            message = err.error;
-          }
-        } catch (error) {
-          // Keep default message when error payload is not JSON.
-        }
+          if (err && err.message) message = err.message;
+        } catch (error) {}
         throw new Error(message);
       }
 
@@ -314,13 +291,13 @@ function adminPeriodsInit() {
       await fetchPeriods();
       renderByCurrentFilter();
     } catch (error) {
-      alert(error.message || 'Không thể xóa đợt. Vui lòng thử lại.');
+      alert(error.message || 'Lỗi kết nối máy chủ.');
     }
   }
 
   window.deletePeriod = deletePeriod;
 
-  // Initial load
+  // Khởi động
   (async function () {
     await fetchPeriods();
     renderByCurrentFilter();

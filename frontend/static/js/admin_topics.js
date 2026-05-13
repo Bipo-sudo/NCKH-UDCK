@@ -55,15 +55,18 @@ function getTopicReason(topic) {
 
 function getStatusBadge(status) {
   const badges = {
-    1: '<span class="badge bg-secondary">Chờ duyệt đề cương</span>',
-    2: '<span class="badge bg-warning text-dark">Yêu cầu sửa đề cương</span>',
-    3: '<span class="badge bg-dark">Bị từ chối</span>',
-    4: '<span class="badge bg-primary">Đang triển khai</span>',
-    5: '<span class="badge bg-info text-dark">Chờ duyệt báo cáo</span>',
-    6: '<span class="badge bg-warning text-dark">Yêu cầu sửa báo cáo</span>',
-    7: '<span class="badge bg-primary">Chờ/Đang bảo vệ</span>',
-    8: '<span class="badge bg-danger">Không đạt/Hủy</span>',
-    9: '<span class="badge bg-success">Hoàn thành</span>'
+    1: '<span class="badge bg-secondary">Chờ duyệt đề xuất</span>',
+    2: '<span class="badge bg-warning text-dark">Yêu cầu sửa đề xuất</span>',
+    3: '<span class="badge bg-primary">Đã duyệt</span>',
+    4: '<span class="badge bg-dark">Không duyệt</span>',
+    5: '<span class="badge bg-primary">Đang thực hiện</span>',
+    6: '<span class="badge bg-secondary">Chưa nộp báo cáo</span>',
+    7: '<span class="badge bg-info text-dark">Đã nộp báo cáo</span>',
+    8: '<span class="badge bg-warning text-dark">Yêu cầu sửa báo cáo</span>',
+    9: '<span class="badge bg-info">Chờ bảo vệ</span>',
+    10: '<span class="badge bg-success">Hoàn thành</span>',
+    11: '<span class="badge bg-danger">Không thành công</span>',
+    12: '<span class="badge bg-danger">Bị hủy</span>'
   };
   return badges[Number(status)] || '<span class="badge bg-secondary">Không xác định</span>';
 }
@@ -79,32 +82,36 @@ function actionButtonsForActive(topic) {
   const topicId = Number(topic.id);
   const status = toNumberStatus(topic);
 
-  if (status === 5) {
+  // Proposal stage (1,2)
+  if (status === 1 || status === 2) {
     return `
       <div class="action-buttons">
         <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
-        <button class="btn-action approve" title="Nghiệm thu Đạt" onclick="openAdminActionPrompt('stage4','accept', ${topicId})"><i class="fas fa-check"></i></button>
-        <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="openAdminActionPrompt('stage4','revision', ${topicId})"><i class="fas fa-pen"></i></button>
-        <button class="btn-action reject" title="Không đạt" onclick="openAdminActionPrompt('stage4','reject', ${topicId})"><i class="fas fa-times"></i></button>
+        <button class="btn-action approve" title="Duyệt đề tài" onclick="applyAdminAction('approve', ${topicId}, '')"><i class="fas fa-check"></i></button>
+        <button class="btn-action edit" title="Yêu cầu sửa" onclick="applyAdminAction('require_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa'))"><i class="fas fa-edit"></i></button>
+        <button class="btn-action reject" title="Từ chối" onclick="applyAdminAction('reject', ${topicId}, prompt('Nhập lý do từ chối'))"><i class="fas fa-times"></i></button>
       </div>
     `;
   }
 
-  if (status === 6) {
+  // Report submitted or revision requested (7,8)
+  if (status === 7 || status === 8) {
     return `
       <div class="action-buttons">
         <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
-        <button class="btn-action approve" title="Nghiệm thu Đạt" onclick="openAdminActionPrompt('stage4','accept', ${topicId})"><i class="fas fa-check"></i></button>
-        <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="openAdminActionPrompt('stage4','revision', ${topicId})"><i class="fas fa-pen"></i></button>
-        <button class="btn-action reject" title="Không đạt" onclick="openAdminActionPrompt('stage4','reject', ${topicId})"><i class="fas fa-times"></i></button>
+        <button class="btn-action approve" title="Duyệt báo cáo" onclick="applyAdminAction('approve_report', ${topicId}, '')"><i class="fas fa-check"></i></button>
+        <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="applyAdminAction('require_report_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa báo cáo'))"><i class="fas fa-pen"></i></button>
       </div>
     `;
   }
 
-  if (status === 4) {
+  // Waiting for defense (9)
+  if (status === 9) {
     return `
       <div class="action-buttons">
         <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+        <button class="btn-action approve" title="Chấm điểm/Hoàn thành" onclick="openGradingModal(${topicId})"><i class="fas fa-trophy"></i></button>
+        <button class="btn-action reject" title="Không thành công" onclick="applyAdminAction('fail_defense', ${topicId}, prompt('Nhập lý do Không thành công'))"><i class="fas fa-times"></i></button>
       </div>
     `;
   }
@@ -143,9 +150,11 @@ function isArchivedTopic(topic, now) {
   }
 
   const period = getPeriodByTopic(topic);
-  const deCuongDeadlineRaw = topic?.dot?.han_nop_de_cuong
+  const deCuongDeadlineRaw = topic?.dot?.hanDangKy
+    ?? topic?.dot?.han_dang_ky
     ?? topic?.dot?.hanNopDeCuong
-    ?? period?.han_nop_de_cuong
+    ?? period?.hanDangKy
+    ?? period?.han_dang_ky
     ?? period?.hanNopDeCuong;
 
   if (!deCuongDeadlineRaw) {
@@ -169,6 +178,10 @@ function applyFilters(topics) {
   const year = String(yearEl?.value || '').trim();
   const status = String(statusEl?.value || '').trim();
 
+  // Determine active period status (if any)
+  const activePeriod = currentPeriods.find(function (p) { return Number(p.id) === Number(currentPeriodId); }) || null;
+  const activePeriodStatus = Number(activePeriod?.trang_thai_dot ?? activePeriod?.trangThaiDot ?? 0);
+
   return topics.filter(function (topic) {
     const statusValue = String(toNumberStatus(topic));
     const schoolYear = getSchoolYear(topic);
@@ -179,6 +192,10 @@ function applyFilters(topics) {
     const matchKeyword = !keyword || searchable.includes(keyword);
     const matchYear = !year || schoolYear === year;
     const matchStatus = !status || statusValue === status;
+
+    // If the current period is in Bảo vệ (5), only show topics in status 9 (Chờ bảo vệ)
+    if (activePeriodStatus === 5 && toNumberStatus(topic) !== 9) return false;
+
     return matchKeyword && matchYear && matchStatus;
   });
 }
@@ -283,10 +300,12 @@ function updateCurrentPeriodContext(period) {
 
   const status = Number(period?.trang_thai_dot ?? period?.trangThaiDot ?? 0);
   const statusMap = {
-    1: { text: 'Chưa mở đăng ký', badge: 'bg-secondary' },
-    2: { text: 'Đang mở đăng ký', badge: 'bg-success' },
-    3: { text: 'Đang nộp báo cáo', badge: 'bg-warning text-dark' },
-    4: { text: 'Đã kết thúc', badge: 'bg-dark' }
+    1: { text: 'Đăng ký', badge: 'bg-secondary' },
+    2: { text: 'Đang thực hiện', badge: 'bg-primary' },
+    3: { text: 'Nghiệm thu', badge: 'bg-warning text-dark' },
+    4: { text: 'Kết thúc', badge: 'bg-dark' },
+    5: { text: 'Bảo vệ', badge: 'bg-info text-dark' },
+    6: { text: 'Hoàn thành', badge: 'bg-success' }
   };
   const state = statusMap[status] || { text: 'Không xác định', badge: 'bg-secondary' };
 
@@ -302,6 +321,17 @@ function updateCurrentPeriodContext(period) {
   }
   if (capBacBadgeEl) {
     capBacBadgeEl.textContent = period?.cap_bac || period?.capBac || '-';
+  }
+  // Show a short notice when period is in Bảo vệ phase (5)
+  const noticeEl = document.getElementById('periodConstraintNotice');
+  if (noticeEl) {
+    if (status === 5) {
+      noticeEl.textContent = 'Lưu ý: Đợt đang ở giai đoạn Bảo vệ — chỉ hiển thị đề tài ở trạng thái "Chờ bảo vệ".';
+      noticeEl.style.display = '';
+    } else {
+      noticeEl.textContent = '';
+      noticeEl.style.display = 'none';
+    }
   }
 }
 

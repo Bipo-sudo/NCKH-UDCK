@@ -31,7 +31,8 @@ def get_active_registration_period() -> RegistrationPeriod | None:
     now = datetime.utcnow()
     periods = RegistrationPeriod.query.order_by(RegistrationPeriod.id.desc()).all()
     for period in periods:
-        if period.thoi_gian_mo_dang_ky <= now < period.han_nop_de_cuong:
+        # Active registration means now is between opening and end of registration window
+        if getattr(period, 'thoi_gian_mo_dang_ky', None) and getattr(period, 'han_dang_ky', None) and period.thoi_gian_mo_dang_ky <= now < period.han_dang_ky:
             return period
     return None
 
@@ -53,28 +54,27 @@ def check_auto_fail():
         if current_period_state >= 3:
             unsigned_topics = (
                 Topic.query
-                .filter_by(dot_dang_ky_id=period.id)
-                .filter(Topic.trang_thai == TopicStatus.DANG_THUC_HIEN)
-                .filter(Topic.da_ky_hop_dong.is_(False))
+                .filter_by(dot_id=period.id)
+                .filter(Topic.trang_thai == TopicStatus.THUC_HIEN)
                 .all()
             )
             for topic in unsigned_topics:
-                topic.trang_thai = TopicStatus.KHONG_DAT
-                topic.ly_do = "Tự động loại do quá hạn đăng ký nhưng chưa ký xác nhận tham gia đề tài."
+                topic.trang_thai = TopicStatus.BI_HUY
+                topic.ly_do = "Tự động chuyển về Hủy do quá hạn đăng ký/không ký xác nhận tham gia đề tài."
                 changed = True
 
         if current_period_state >= 4:
             report_deadline_topics = (
                 Topic.query
-                .filter_by(dot_dang_ky_id=period.id)
-                .filter(Topic.trang_thai == TopicStatus.DANG_THUC_HIEN)
+                .filter_by(dot_id=period.id)
+                .filter(Topic.trang_thai == TopicStatus.THUC_HIEN)
                 .all()
             )
             for topic in report_deadline_topics:
                 has_report = Report.query.filter_by(de_tai_id=topic.id, loai_bao_cao=2).count() > 0
                 if not has_report:
-                    topic.trang_thai = TopicStatus.KHONG_DAT
-                    topic.ly_do = "Tự động loại do quá hạn nộp báo cáo tổng kết."
+                    topic.trang_thai = TopicStatus.BI_HUY
+                    topic.ly_do = "Tự động chuyển về Hủy do quá hạn nộp báo cáo tổng kết."
                     changed = True
 
     if changed:

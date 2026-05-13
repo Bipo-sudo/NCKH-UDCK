@@ -31,7 +31,7 @@ def check_auto_fail():
     for p in periods:
         topics = (
             Topic.query
-            .filter_by(dot_dang_ky_id=p.id)
+            .filter_by(dot_id=p.id)
             .filter(Topic.trang_thai.notin_([
                 TopicStatus.KHONG_DAT,
                 TopicStatus.DA_HOAN_THANH,

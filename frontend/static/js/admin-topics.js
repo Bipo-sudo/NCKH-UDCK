@@ -16,19 +16,22 @@ function adminTopicsAltInit() {
   }
 
   function getStatusBadge(status) {
-    const badges = {
-      1: '<span class="badge bg-secondary">Chờ duyệt đề cương</span>',
-      2: '<span class="badge bg-warning text-dark">Yêu cầu sửa đề cương</span>',
-      3: '<span class="badge bg-dark">Bị từ chối</span>',
-      4: '<span class="badge bg-primary">Đang triển khai</span>',
-      5: '<span class="badge bg-info text-dark">Chờ duyệt báo cáo</span>',
-      6: '<span class="badge bg-warning text-dark">Yêu cầu sửa báo cáo</span>',
-      7: '<span class="badge bg-primary">Chờ/Đang bảo vệ</span>',
-      8: '<span class="badge bg-danger">Không đạt/Hủy</span>',
-      9: '<span class="badge bg-success">Hoàn thành</span>'
-    };
-    return badges[status] || '<span class="badge bg-secondary">Không xác định</span>';
-  }
+  const badges = {
+    1: '<span class="badge bg-secondary">Chờ duyệt đề xuất</span>',
+    2: '<span class="badge bg-warning text-dark">Yêu cầu sửa đề xuất</span>',
+    3: '<span class="badge bg-primary">Đã duyệt</span>',
+    4: '<span class="badge bg-dark">Không duyệt</span>',
+    5: '<span class="badge bg-primary">Đang thực hiện</span>',
+    6: '<span class="badge bg-secondary">Chưa nộp báo cáo</span>',
+    7: '<span class="badge bg-info text-dark">Đã nộp báo cáo</span>',
+    8: '<span class="badge bg-warning text-dark">Yêu cầu sửa báo cáo</span>',
+    9: '<span class="badge bg-info">Chờ bảo vệ</span>',
+    10: '<span class="badge bg-success">Hoàn thành</span>',
+    11: '<span class="badge bg-danger">Không thành công</span>',
+    12: '<span class="badge bg-danger">Bị hủy</span>',
+  };
+  return badges[Number(status)] || '<span class="badge bg-secondary">Không xác định</span>';
+}
 
   function formatDate(value) {
     if (!value) return '-';
@@ -38,6 +41,18 @@ function adminTopicsAltInit() {
 
   function statusMessage(message) {
     tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">${message}</td></tr>`;
+  }
+
+  function getTopicPeriodPhase(topic) {
+    return Number(
+      topic?.dot?.trang_thai_dot
+      ?? topic?.dot?.trangThaiDot
+      ?? topic?.period?.trang_thai_dot
+      ?? topic?.period?.trangThaiDot
+      ?? topic?.trang_thai_dot
+      ?? topic?.trangThaiDot
+      ?? 0
+    );
   }
 
   async function fetchTopics() {
@@ -64,6 +79,9 @@ function adminTopicsAltInit() {
     const statusFilter = statusFilterEl?.value || '';
 
     filteredTopics = currentTopics.filter((topic) => {
+      if (getTopicPeriodPhase(topic) === 5 && Number(topic.status || topic.trang_thai || 0) !== 9) {
+        return false;
+      }
       const matchYear = !yearFilter || String(topic.year || topic.nam_hoc || '').includes(yearFilter);
       const matchStatus = !statusFilter || String(topic.status || topic.trang_thai || '') === String(statusFilter);
       return matchYear && matchStatus;
@@ -91,10 +109,18 @@ function adminTopicsAltInit() {
           <div class="action-buttons">
             <button class="btn-action view" title="Xem chi tiết hồ sơ" onclick="showTopicDetail(${topic.id})" data-bs-toggle="offcanvas" data-bs-target="#topicDetailOffcanvas"><i class="fas fa-eye"></i></button>
             ${(topic.status === 1 || topic.status === 2 || topic.trang_thai === 1 || topic.trang_thai === 2) ? `
-              <button class="btn-action approve" title="Duyệt đề tài" onclick="openAdminActionPrompt('stage2','approve', ${topic.id})"><i class="fas fa-check"></i></button>
-              <button class="btn-action edit" title="Yêu cầu sửa" onclick="openAdminActionPrompt('stage2','revision', ${topic.id})"><i class="fas fa-edit"></i></button>
-              <button class="btn-action reject" title="Từ chối" onclick="openAdminActionPrompt('stage2','reject', ${topic.id})"><i class="fas fa-times"></i></button>
-            ` : ''}
+                  <button class="btn-action approve" title="Duyệt đề tài" onclick="applyAdminAction('stage2','approve', ${topic.id})"><i class="fas fa-check"></i></button>
+                  <button class="btn-action edit" title="Yêu cầu sửa" onclick="applyAdminAction('stage2','revision', ${topic.id}, prompt('Nhập lý do yêu cầu sửa') )"><i class="fas fa-edit"></i></button>
+                  <button class="btn-action reject" title="Từ chối" onclick="applyAdminAction('stage2','reject', ${topic.id}, prompt('Nhập lý do từ chối') )"><i class="fas fa-times"></i></button>
+                ` : ''}
+            ${(topic.status === 7 || topic.trang_thai === 7 || topic.status === 8 || topic.trang_thai === 8) ? `
+                  <button class="btn-action approve" title="Duyệt báo cáo" onclick="applyAdminAction('stage4','approve_report', ${topic.id})"><i class="fas fa-check"></i></button>
+                  <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="applyAdminAction('stage4','require_report_revision', ${topic.id}, prompt('Nhập lý do yêu cầu sửa báo cáo') )"><i class="fas fa-pen"></i></button>
+                ` : ''}
+            ${(topic.status === 9 || topic.trang_thai === 9) ? `
+                  <button class="btn-action approve" title="Chấm điểm/Hoàn thành" onclick="openGradingModal(${topic.id})"><i class="fas fa-trophy"></i></button>
+                  <button class="btn-action reject" title="Không thành công" onclick="applyAdminAction('stage5','fail_defense', ${topic.id}, prompt('Nhập lý do Không thành công') )"><i class="fas fa-times"></i></button>
+                ` : ''}
           </div>
         </td>
       </tr>
@@ -196,7 +222,8 @@ function adminTopicsAltInit() {
   }
 
   async function applyAdminAction(stage, action, topicId, reason) {
-    const actionName = action === 'accept' ? 'accept' : action === 'revision' ? 'revision' : action === 'reject' ? 'reject' : 'approve';
+    // Use the provided action string directly (it will be passed to the API)
+    const actionName = action;
     try {
       const resp = await fetch(`/api/topics/${topicId}/${actionName}`, {
         method: 'PUT',
@@ -221,7 +248,102 @@ function adminTopicsAltInit() {
     if (statusFilter) statusFilter.addEventListener('change', renderTopicsTable);
   }
 
+  function actionButtonsForActive(topic) {
+    const topicId = Number(topic.id);
+    const status = Number(topic.status || topic.trang_thai || 0);
+
+    // Proposal stage (1,2): Duyệt / Yêu cầu sửa / Từ chối
+    if (status === 1 || status === 2) {
+      return `
+        <div class="action-buttons">
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action approve" title="Duyệt đề tài" onclick="applyAdminAction('stage2','approve', ${topicId})"><i class="fas fa-check"></i></button>
+          <button class="btn-action edit" title="Yêu cầu sửa" onclick="applyAdminAction('stage2','require_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa'))"><i class="fas fa-edit"></i></button>
+          <button class="btn-action reject" title="Từ chối" onclick="applyAdminAction('stage2','reject', ${topicId}, prompt('Nhập lý do từ chối'))"><i class="fas fa-times"></i></button>
+        </div>
+      `;
+    }
+
+    // Report submitted or report revision (7,8): Duyệt báo cáo / Yêu cầu sửa
+    if (status === 7 || status === 8) {
+      return `
+        <div class="action-buttons">
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action approve" title="Duyệt báo cáo" onclick="applyAdminAction('stage4','approve_report', ${topicId})"><i class="fas fa-check"></i></button>
+          <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="applyAdminAction('stage4','require_report_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa báo cáo'))"><i class="fas fa-pen"></i></button>
+        </div>
+      `;
+    }
+
+    // Waiting for defense (9): Grade / Fail
+    if (status === 9) {
+      return `
+        <div class="action-buttons">
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action approve" title="Chấm điểm/Hoàn thành" onclick="openGradingModal(${topicId})"><i class="fas fa-trophy"></i></button>
+          <button class="btn-action reject" title="Không thành công" onclick="applyAdminAction('stage5','fail_defense', ${topicId}, prompt('Nhập lý do Không thành công'))"><i class="fas fa-times"></i></button>
+        </div>
+      `;
+    }
+
+    // Default: only view
+    return `
+      <div class="action-buttons">
+        <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+      </div>
+    `;
+}
+
+  window.openGradingModal = function(topicId) {
+    // Ràng buộc cấp bậc tự động từ dữ liệu đợt
+    const topic = currentTopics.find(t => Number(t.id) === Number(topicId));
+    const capBacDot = topic && topic.dot ? topic.dot.cap_bac : '';
+    const levelInput = document.getElementById('awardLevelInput');
+    
+    if (levelInput && capBacDot) {
+        levelInput.value = capBacDot;
+        levelInput.disabled = true; // Khóa lại không cho chọn sai
+    } else if (levelInput) {
+        levelInput.disabled = false;
+    }
+
+    // Gắn sự kiện cho nút Lưu
+    const btnSave = document.getElementById('btnSaveAward');
+    if (btnSave) {
+        btnSave.onclick = function() { submitGrading(topicId); };
+    }
+
+    // Hiển thị modal đã có sẵn trong HTML
+    const modalEl = document.getElementById('awardModal');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+};
+
+window.submitGrading = async function(topicId) {
+    const capGiai = document.getElementById('awardLevelInput').value;
+    const xepLoai = document.getElementById('awardRankInput').value;
+
+    try {
+        const resp = await fetch(`/api/topics/${topicId}/grade`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cap_giai: capGiai, xep_loai: xepLoai })
+        });
+
+        if (!resp.ok) throw new Error('Không thể lưu kết quả');
+        
+        alert('Đã ghi nhận điểm và giải thưởng thành công!');
+        bootstrap.Modal.getInstance(document.getElementById('awardModal')).hide();
+        
+        // Tải lại danh sách
+        await fetchTopics(currentPeriodId);
+    } catch (err) {
+        alert(err.message);
+    }
+};
+
   window.showTopicDetail = showTopicDetail;
+  window.openGradingModal = openGradingModal;
+  window.submitGrading = submitGrading;
   window.openAdminActionPrompt = openAdminActionPrompt;
   window.applyAdminAction = applyAdminAction;
 

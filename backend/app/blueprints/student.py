@@ -16,7 +16,7 @@ def _serialize_period(period):
         "nam_hoc": period.nam_hoc,
         "thoiGianThongBao": period.thoi_gian_thong_bao.isoformat(timespec="minutes") if period.thoi_gian_thong_bao else "",
         "thoiGianMoDangKy": period.thoi_gian_mo_dang_ky.isoformat(timespec="minutes") if period.thoi_gian_mo_dang_ky else "",
-        "hanNopDeCuong": period.han_nop_de_cuong.isoformat(timespec="minutes") if period.han_nop_de_cuong else "",
+        "hanDangKy": period.han_dang_ky.isoformat(timespec="minutes") if period.han_dang_ky else "",
         "hanNopBaoCao": period.han_nop_bao_cao.isoformat(timespec="minutes") if period.han_nop_bao_cao else "",
         "trangThaiDot": period.trang_thai_dot_hien_tai,
         "mo_ta": period.mo_ta or "",
@@ -112,8 +112,8 @@ def register():
             san_pham_du_kien=spdk,
             giang_vien_huong_dan=gvhd,
             sinh_vien_id=stu.id,
-            dot_dang_ky_id=period.id,
-            trang_thai=TopicStatus.CHO_XET_DUYET,
+            dot_id=period.id,
+            trang_thai=TopicStatus.CHO_DUYET_DE_XUAT,
             file_thuyet_minh=path,
         )
         db.session.add(topic)
@@ -132,7 +132,7 @@ def edit_topic(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     if topic.sinh_vien_id != stu.id:
         abort(403)
-    if topic.trang_thai not in (TopicStatus.CHO_XET_DUYET, TopicStatus.YEU_CAU_CHINH_SUA):
+    if topic.trang_thai not in (TopicStatus.CHO_DUYET_DE_XUAT, TopicStatus.SUA_DE_XUAT):
         flash("Không thể chỉnh sửa ở trạng thái hiện tại", "warning")
         return redirect(url_for("student.dashboard"))
 
@@ -147,7 +147,7 @@ def edit_topic(topic_id):
             path = save_uploaded(file, "THUYET_MINH_UPLOAD_FOLDER", allowed_exts=current_app.config["ALLOWED_THUYET_MINH_EXTENSIONS"]) 
             if path:
                 topic.file_thuyet_minh = path
-        topic.trang_thai = TopicStatus.CHO_XET_DUYET
+        topic.trang_thai = TopicStatus.CHO_DUYET_DE_XUAT
         topic.ly_do = None
         db.session.commit()
         db.session.add(Notification(tieu_de="Cập nhật đề tài", noi_dung="Bạn đã chỉnh sửa đề tài", nguoi_nhan_id=stu.id, de_tai_id=topic.id))
@@ -172,7 +172,7 @@ def upload_report(topic_id):
     topic = Topic.query.get_or_404(topic_id)
     if topic.sinh_vien_id != stu.id:
         abort(403)
-    period = RegistrationPeriod.query.get(topic.dot_dang_ky_id)
+    period = RegistrationPeriod.query.get(topic.dot_id)
     disabled = datetime.utcnow() > period.han_nop_bao_cao
 
     if request.method == "POST":
@@ -191,8 +191,8 @@ def upload_report(topic_id):
             return redirect(url_for("student.upload_report", topic_id=topic_id))
         report = Report(de_tai_id=topic.id, loai_bao_cao=2, file_path=path)
         db.session.add(report)
-        # Sau khi SV nộp báo cáo tổng kết, chuyển sang CHO_NGHIEM_THU
-        topic.trang_thai = TopicStatus.CHO_NGHIEM_THU
+        # Sau khi SV nộp báo cáo tổng kết, chuyển sang DA_NOP_BAO_CAO
+        topic.trang_thai = TopicStatus.DA_NOP_BAO_CAO
         topic.ly_do = None
         db.session.commit()
         db.session.add(Notification(
@@ -259,7 +259,7 @@ def submit_final(topic_id):
     if topic.sinh_vien_id != stu.id:
         abort(403)
 
-    if topic.trang_thai not in (TopicStatus.DANG_THUC_HIEN, TopicStatus.SUA_BAO_CAO):
+    if topic.trang_thai not in (TopicStatus.THUC_HIEN, TopicStatus.SUA_BAO_CAO):
         flash("Trạng thái hiện tại không cho phép nộp báo cáo tổng kết.", "warning")
         return redirect(url_for("student.my_topic"))
 
@@ -275,7 +275,7 @@ def submit_final(topic_id):
 
     report = Report(de_tai_id=topic.id, loai_bao_cao=2, file_path=path)
     db.session.add(report)
-    topic.trang_thai = TopicStatus.CHO_NGHIEM_THU
+    topic.trang_thai = TopicStatus.DA_NOP_BAO_CAO
     topic.ly_do = None
     db.session.commit()
     db.session.add(Notification(

@@ -25,8 +25,8 @@ def _reset_sqlite_db_if_schema_mismatch(app: Flask) -> None:
     required_columns = {
         "tai_khoan": {"id", "username", "email", "password_hash", "phone", "role", "is_active"},
         "sinh_vien": {"id", "account_id", "mssv", "ho_ten", "ngay_sinh", "so_dien_thoai", "lop", "khoa", "khoa_hoc"},
-        "dot_nckh": {"id", "ten_dot", "nam_hoc", "mo_ta", "thoi_gian_thong_bao", "thoi_gian_mo_dang_ky", "han_nop_de_cuong", "han_nop_bao_cao", "cap_bac", "trang_thai_dot", "file_dinh_kem"},
-        "de_tai": {"id", "dot_id", "chu_nhiem_id", "ten_de_tai", "muc_tieu", "san_pham_du_kien", "linh_vuc", "khoa_thuc_hien", "giang_vien_hd", "trang_thai", "ly_do", "lien_ket_ngoai", "file_de_xuat", "file_bao_cao", "file_thuyet_minh", "cap_giai_thuong", "xep_loai_giai", "da_ky_hop_dong", "created_at", "updated_at"},
+        "dot_nckh": {"id", "ten_dot", "nam_hoc", "mo_ta", "thoi_gian_thong_bao", "thoi_gian_mo_dang_ky", "han_dang_ky", "thoi_gian_mo_nop_bao_cao", "han_nop_bao_cao", "thoi_gian_bat_dau_bao_ve", "han_bao_ve", "cap_bac", "trang_thai_dot", "file_dinh_kem"},
+        "de_tai": {"id", "dot_id", "chu_nhiem_id", "ten_de_tai", "muc_tieu", "san_pham_du_kien", "linh_vuc", "khoa_thuc_hien", "giang_vien_hd", "trang_thai", "ly_do", "lien_ket_ngoai", "file_de_xuat", "file_bao_cao", "file_thuyet_minh", "cap_giai_thuong", "xep_loai_giai", "created_at", "updated_at"},
         "thanh_vien_de_tai": {"id", "de_tai_id", "sinh_vien_id", "vai_tro"},
         "bao_cao": {"id", "de_tai_id", "loai_bao_cao", "file_path", "ngay_nop", "trang_thai"},
         "thong_bao": {"id", "tieu_de", "noi_dung", "nguoi_nhan_id", "de_tai_id", "ngay_gui", "da_xem"},
@@ -71,6 +71,7 @@ def create_app():
     static_folder = os.path.join(ROOT_DIR, "frontend", "static")
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
     app.config.from_object(Config)
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     # Ensure upload directories exist
     os.makedirs(app.config.get("THUYET_MINH_UPLOAD_FOLDER"), exist_ok=True)

@@ -10,33 +10,31 @@
 </head>
 <body>
   <div class="d-flex min-vh-100">
-    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <i class="fas fa-graduation-cap"></i>
         <span>UDCK NCKH</span>
       </div>
       <nav class="sidebar-nav">
-        <a href="/admin/admin_dashboard.html" class="nav-item" data-page="admin_dashboard.html">
+        <a href="/admin/" class="nav-item" data-page="dashboard">
           <i class="fas fa-chart-line"></i>
           <span>Dashboard</span>
         </a>
-        <a href="/admin/admin_periods.html" class="nav-item" data-page="admin_periods.html">
+        <a href="/admin/periods" class="nav-item" data-page="periods">
           <i class="fas fa-calendar-alt"></i>
           <span>Quản lý Đợt NCKH</span>
         </a>
-        <a href="/admin/admin_topics.html" class="nav-item" data-page="admin_topics.html">
+        <a href="/admin/topics" class="nav-item" data-page="topics">
           <i class="fas fa-file-alt"></i>
           <span>Quản lý Đề tài</span>
         </a>
-        <a href="/admin/admin_accounts.html" class="nav-item" data-page="admin_accounts.html">
+        <a href="/admin/accounts" class="nav-item" data-page="accounts">
           <i class="fas fa-users"></i>
           <span>Quản lý Tài khoản</span>
         </a>
       </nav>
     </aside>
 
-    <!-- Main Content -->
     <main class="main-content flex-grow-1" id="mainContent">
       <header class="top-header">
         <button class="btn-toggle" id="sidebarToggle" type="button">
@@ -96,62 +94,79 @@
     </main>
   </div>
 
-  <!-- Modal: Thêm đợt NCKH -->
   <div class="modal fade" id="addPeriodModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
+    <div class="modal-dialog modal-lg"> <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Thêm đợt NCKH</h5>
+          <h5 class="modal-title">Thêm cấu hình Đợt NCKH</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="ten_dot" class="form-label">Tên đợt NCKH</label>
-            <input id="ten_dot" type="text" class="form-control" placeholder="Ví dụ: Đợt NCKH Sinh viên Cấp Trường" required>
+          <input type="hidden" id="periodEditId"> <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="ten_dot" class="form-label fw-bold">Tên đợt NCKH <span class="text-danger">*</span></label>
+              <input id="ten_dot" type="text" class="form-control" placeholder="Ví dụ: Đợt NCKH Sinh viên Cấp Trường" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="nam_hoc" class="form-label">Năm học <span class="text-danger">*</span></label>
+              <input id="nam_hoc" type="text" class="form-control" placeholder="Ví dụ: 2025-2026" pattern="\d{4}-\d{4}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="cap_bac" class="form-label">Cấp bậc NCKH <span class="text-danger">*</span></label>
+              <select id="cap_bac" class="form-select" required>
+                <option value="Cấp Khoa">Cấp Khoa</option>
+                <option value="Cấp Trường" selected>Cấp Trường</option>
+                <option value="Cấp Bộ">Cấp Bộ</option>
+                <option value="Cấp Quốc gia">Cấp Quốc gia</option>
+              </select>
+            </div>
+            <div class="col-md-12 mb-3">
+              <label for="periodDetail" class="form-label">Mô tả chi tiết</label>
+              <textarea id="periodDetail" class="form-control" rows="2" placeholder="Nhập nội dung thông báo của đợt..."></textarea>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="nam_hoc" class="form-label">Năm học</label>
-            <input id="nam_hoc" type="text" class="form-control" placeholder="Ví dụ: 2025-2026" pattern="\\d{4}-\\d{4}" inputmode="numeric" required>
-            <small class="text-muted">Nhập đúng dạng năm học, ví dụ: 2024-2025 hoặc 2025-2026.</small>
+
+          <hr class="mt-0">
+          <h6 class="mb-3 text-primary fw-bold"><i class="fas fa-clock me-2"></i>Cấu hình 7 Mốc thời gian (Bắt buộc tăng dần)</h6>
+          
+          <div class="row bg-light p-3 rounded border">
+            <div class="col-md-6 mb-3">
+              <label for="timeThongBao" class="form-label">1. Thời gian thông báo <span class="text-danger">*</span></label>
+              <input id="timeThongBao" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="timeMoDangKy" class="form-label">2. Mở đăng ký đề tài <span class="text-danger">*</span></label>
+              <input id="timeMoDangKy" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="timeHanDangKy" class="form-label">3. Hạn đăng ký (Chốt) <span class="text-danger">*</span></label>
+              <input id="timeHanDangKy" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="timeMoNopBaoCao" class="form-label">4. Mở nộp báo cáo <span class="text-danger">*</span></label>
+              <input id="timeMoNopBaoCao" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="timeHanNopBaoCao" class="form-label">5. Hạn nộp báo cáo <span class="text-danger">*</span></label>
+              <input id="timeHanNopBaoCao" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="timeBatDauBaoVe" class="form-label">6. Bắt đầu bảo vệ <span class="text-danger">*</span></label>
+              <input id="timeBatDauBaoVe" type="datetime-local" class="form-control" required>
+            </div>
+            <div class="col-md-12 mb-2">
+              <label for="timeHanBaoVe" class="form-label">7. Hạn bảo vệ (Kết thúc đợt) <span class="text-danger">*</span></label>
+              <input id="timeHanBaoVe" type="datetime-local" class="form-control" required>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="cap_bac" class="form-label">Cấp bậc NCKH</label>
-            <select id="cap_bac" class="form-select" required>
-              <option value="Cấp Khoa">Cấp Khoa</option>
-              <option value="Cấp Trường" selected>Cấp Trường</option>
-              <option value="Cấp Bộ">Cấp Bộ</option>
-              <option value="Cấp Quốc gia">Cấp Quốc gia</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="periodDetail" class="form-label">Mô tả</label>
-            <textarea id="periodDetail" class="form-control" rows="3" placeholder="Nhập mô tả hoặc nội dung thông báo của đợt..."></textarea>
-          </div>
-          <div class="mb-3">
-            <label for="thoiGianThongBao" class="form-label">Thời gian thông báo</label>
-            <input id="thoiGianThongBao" type="datetime-local" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="thoiGianMoDangKy" class="form-label">Thời gian mở đăng ký</label>
-            <input id="thoiGianMoDangKy" type="datetime-local" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="hanNopDeCuong" class="form-label">Hạn nộp đề cương</label>
-            <input id="hanNopDeCuong" type="datetime-local" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="hanNopBaoCao" class="form-label">Hạn nộp báo cáo</label>
-            <input id="hanNopBaoCao" name="han_nop_bao_cao" type="datetime-local" class="form-control" required>
-            <small class="text-muted">Bốn mốc phải tăng dần: thông báo, mở đăng ký, nộp đề cương, nộp báo cáo.</small>
-          </div>
-          <div>
-            <label for="periodAttachment" class="form-label">Tệp đính kèm (Thông báo/Quyết định)</label>
+
+          <div class="mt-3">
+            <label for="periodAttachment" class="form-label fw-bold">Tệp đính kèm (Thông báo/Quyết định)</label>
             <input id="periodAttachment" type="file" class="form-control" accept=".pdf,.doc,.docx">
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-          <button type="button" class="btn btn-primary" id="savePeriodBtn">Lưu</button>
+          <button type="button" class="btn btn-primary" id="savePeriodBtn">Lưu cấu hình</button>
         </div>
       </div>
     </div>

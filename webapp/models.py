@@ -8,25 +8,34 @@ from .extensions import db
 
 
 class TopicStatus:
-    CHO_DUYET_DE_CUONG = 1
-    SUA_DE_CUONG = 2
-    BI_TU_CHOI = 3
-    DANG_TRIEN_KHAI = 4
-    CHO_BAO_VE = 5
-    SUA_SAU_BAO_VE = 6
-    KHONG_DAT = 7
-    NGHIEM_THU_THANH_CONG = 8
+    # New unified 1..12 status mapping
+    CHO_DUYET_DE_XUAT = 1
+    SUA_DE_XUAT = 2
+    DA_DUYET = 3
+    KHONG_DUYET = 4
+    THUC_HIEN = 5
+    CHUA_NOP_BAO_CAO = 6
+    DA_NOP_BAO_CAO = 7
+    SUA_BAO_CAO = 8
+    CHO_BAO_VE = 9
+    HOAN_THANH = 10
+    KHONG_THANH_CONG = 11
+    BI_HUY = 12
 
-    CHO_DUYET_DE_XUAT = CHO_DUYET_DE_CUONG
-    SUA_DE_XUAT = SUA_DE_CUONG
-    DANG_THUC_HIEN = DANG_TRIEN_KHAI
-    CHO_NGHIEM_THU = CHO_BAO_VE
-    SUA_BAO_CAO = SUA_SAU_BAO_VE
-    HOAN_THANH = NGHIEM_THU_THANH_CONG
+    # Backwards-compatible aliases for older code
+    CHO_DUYET_DE_CUONG = CHO_DUYET_DE_XUAT
+    SUA_DE_CUONG = SUA_DE_XUAT
+    DANG_TRIEN_KHAI = THUC_HIEN
+    CHO_BAO_VE = CHO_BAO_VE
+    SUA_SAU_BAO_VE = SUA_BAO_CAO
+    NGHIEM_THU_THANH_CONG = HOAN_THANH
 
-    CHO_XET_DUYET = CHO_DUYET_DE_CUONG
-    YEU_CAU_CHINH_SUA = SUA_DE_CUONG
-    DA_HOAN_THANH = NGHIEM_THU_THANH_CONG
+    # Common legacy names used across webapp
+    CHO_XET_DUYET = CHO_DUYET_DE_XUAT
+    YEU_CAU_CHINH_SUA = SUA_DE_XUAT
+    DA_HOAN_THANH = HOAN_THANH
+    BI_TU_CHOI = KHONG_DUYET
+    KHONG_DAT = KHONG_THANH_CONG
 
 
 class Account(UserMixin, db.Model):
@@ -217,7 +226,6 @@ class Topic(db.Model):
     file_thuyet_minh = db.Column(db.Text, nullable=True)
     cap_giai_thuong = db.Column(db.String(50), nullable=True)
     xep_loai_giai = db.Column(db.String(30), nullable=True)
-    da_ky_hop_dong = db.Column(db.Boolean, nullable=False, default=False)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

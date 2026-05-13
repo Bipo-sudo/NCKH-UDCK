@@ -1,9 +1,9 @@
 from __future__ import annotations
-
+from flask import jsonify, request
 from datetime import datetime
 
 from flask import Blueprint, current_app, jsonify, request
-from flask_login import current_user
+from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
 
@@ -24,6 +24,13 @@ api_bp = Blueprint("api", __name__)
 
 def _json_error(message: str, status_code: int = 400):
     return jsonify({"error": message}), status_code
+
+
+def _json_success(message: str, data=None, status_code: int = 200):
+    payload = {"status": "success", "message": message}
+    if data is not None:
+        payload["data"] = data
+    return jsonify(payload), status_code
 
 
 def _require_authenticated_json():
@@ -62,30 +69,62 @@ def _parse_dt(value):
         return None
 
 
+def _normalize_account_role(value: str | None) -> str:
+    role = (value or "student").strip().lower()
+    return role if role in {"admin", "student"} else "student"
+
+
 def _apply_topic_action(topic: Topic, action: str, reason: str | None = None):
-    if action == "approve":
-        topic.trang_thai = 4
+    # Normalize common synonyms
+    key = (action or "").strip().lower()
+    if key in {"approve", "approve_proposal"}:
+        topic.trang_thai = TopicStatus.DA_DUYET
         topic.ly_do = None
         return
 
-    if action == "reject":
-        topic.trang_thai = 3
+    if key in {"reject", "reject_proposal"}:
+        topic.trang_thai = TopicStatus.KHONG_DUYET
         topic.ly_do = reason or "Đề tài bị từ chối"
         return
 
-    if action == "revision":
-        # Nếu đang ở giai đoạn báo cáo thì chuyển 6, còn lại chuyển 2.
-        if topic.trang_thai in (5, 6, 7):
-            topic.trang_thai = 6
-        else:
-            topic.trang_thai = 2
+    if key in {"revision", "require_revision", "require-revision"}:
+        topic.trang_thai = TopicStatus.SUA_DE_XUAT
         topic.ly_do = reason or "Yêu cầu chỉnh sửa"
         return
 
-    if action == "accept":
-        # Theo yêu cầu frontend: chuyển sang Chờ bảo vệ/Đạt = 7
-        topic.trang_thai = 7
+    if key in {"accept", "start", "start_work"}:
+        topic.trang_thai = TopicStatus.THUC_HIEN
         topic.ly_do = None
+        return
+
+    if key in {"submit_report", "submit-report", "report_submitted"}:
+        topic.trang_thai = TopicStatus.DA_NOP_BAO_CAO
+        topic.ly_do = None
+        return
+
+    if key in {"require_report_revision", "require-report-revision", "require-report"}:
+        topic.trang_thai = TopicStatus.SUA_BAO_CAO
+        topic.ly_do = reason or "Yêu cầu chỉnh sửa báo cáo"
+        return
+
+    if key in {"approve_report", "approve-report", "report_approved"}:
+        topic.trang_thai = TopicStatus.CHO_BAO_VE
+        topic.ly_do = None
+        return
+
+    if key in {"grade", "grade_topic", "grade-topic", "mark_pass"}:
+        topic.trang_thai = TopicStatus.HOAN_THANH
+        topic.ly_do = None
+        return
+
+    if key in {"fail_defense", "fail", "fail-defense", "mark_fail"}:
+        topic.trang_thai = TopicStatus.KHONG_THANH_CONG
+        topic.ly_do = reason or "Không đạt sau bảo vệ"
+        return
+
+    if key in {"cancel", "bi_huy", "huy", "abort"}:
+        topic.trang_thai = TopicStatus.BI_HUY
+        topic.ly_do = reason or "Đề tài bị hủy"
         return
 
     raise ValueError("Unsupported action")
@@ -123,12 +162,17 @@ def api_create_period():
     cap_bac = (payload.get("cap_bac") or payload.get("capBac") or "Cấp Trường").strip() or "Cấp Trường"
     thoi_gian_thong_bao = _parse_dt(payload.get("thoi_gian_thong_bao") or payload.get("thoiGianThongBao"))
     thoi_gian_mo_dang_ky = _parse_dt(payload.get("thoi_gian_mo_dang_ky") or payload.get("thoiGianMoDangKy"))
-    han_nop_de_cuong = _parse_dt(payload.get("han_nop_de_cuong") or payload.get("hanNopDeCuong"))
+    # Accept both legacy and new field names for period boundaries
+    han_dang_ky = _parse_dt(payload.get("han_dang_ky") or payload.get("hanDangKy") or payload.get("han_nop_de_cuong") or payload.get("hanNopDeCuong"))
+    thoi_gian_mo_nop_bao_cao = _parse_dt(payload.get("thoi_gian_mo_nop_bao_cao") or payload.get("thoiGianMoNopBaoCao"))
     han_nop_bao_cao = _parse_dt(payload.get("han_nop_bao_cao") or payload.get("hanNopBaoCao"))
+    thoi_gian_bat_dau_bao_ve = _parse_dt(payload.get("thoi_gian_bat_dau_bao_ve") or payload.get("thoiGianBatDauBaoVe"))
+    han_bao_ve = _parse_dt(payload.get("han_bao_ve") or payload.get("hanBaoVe"))
     mo_ta = (payload.get("mo_ta") or payload.get("chiTiet") or "").strip() or None
     file_dinh_kem = (payload.get("file_dinh_kem") or payload.get("fileDinhKem") or "").strip() or None
 
-    if not all([ten_dot, nam_hoc, thoi_gian_thong_bao, thoi_gian_mo_dang_ky, han_nop_de_cuong, han_nop_bao_cao]):
+    # Require core fields; additional timeline fields are optional for now
+    if not all([ten_dot, nam_hoc, thoi_gian_thong_bao, thoi_gian_mo_dang_ky, han_nop_bao_cao]):
         return _json_error("Missing required fields", 400)
 
     try:
@@ -138,8 +182,11 @@ def api_create_period():
             mo_ta=mo_ta,
             thoi_gian_thong_bao=thoi_gian_thong_bao,
             thoi_gian_mo_dang_ky=thoi_gian_mo_dang_ky,
-            han_nop_de_cuong=han_nop_de_cuong,
+            han_dang_ky=han_dang_ky,
+            thoi_gian_mo_nop_bao_cao=thoi_gian_mo_nop_bao_cao,
             han_nop_bao_cao=han_nop_bao_cao,
+            thoi_gian_bat_dau_bao_ve=thoi_gian_bat_dau_bao_ve,
+            han_bao_ve=han_bao_ve,
             cap_bac=cap_bac,
             file_dinh_kem=file_dinh_kem,
         )
@@ -185,10 +232,18 @@ def api_update_period(period_id):
             ("thoiGianThongBao", "thoi_gian_thong_bao"),
             ("thoi_gian_mo_dang_ky", "thoi_gian_mo_dang_ky"),
             ("thoiGianMoDangKy", "thoi_gian_mo_dang_ky"),
-            ("han_nop_de_cuong", "han_nop_de_cuong"),
-            ("hanNopDeCuong", "han_nop_de_cuong"),
+            ("han_dang_ky", "han_dang_ky"),
+            ("hanDangKy", "han_dang_ky"),
+            ("han_nop_de_cuong", "han_dang_ky"),
+            ("hanNopDeCuong", "han_dang_ky"),
+            ("thoi_gian_mo_nop_bao_cao", "thoi_gian_mo_nop_bao_cao"),
+            ("thoiGianMoNopBaoCao", "thoi_gian_mo_nop_bao_cao"),
             ("han_nop_bao_cao", "han_nop_bao_cao"),
             ("hanNopBaoCao", "han_nop_bao_cao"),
+            ("thoi_gian_bat_dau_bao_ve", "thoi_gian_bat_dau_bao_ve"),
+            ("thoiGianBatDauBaoVe", "thoi_gian_bat_dau_bao_ve"),
+            ("han_bao_ve", "han_bao_ve"),
+            ("hanBaoVe", "han_bao_ve"),
         ]:
             if key in payload and payload[key]:
                 parsed = _parse_dt(payload[key])
@@ -337,11 +392,10 @@ def api_topic_action(topic_id, action):
     payload = _get_json_payload()
     reason = (payload.get("reason") or payload.get("ly_do") or "").strip() or None
 
-    normalized_action = "revision" if action == "require-revision" else action
-    if normalized_action not in {"approve", "reject", "revision", "accept"}:
+    try:
+        _apply_topic_action(topic, action, reason)
+    except ValueError:
         return _json_error("Unsupported action", 404)
-
-    _apply_topic_action(topic, normalized_action, reason)
 
     db.session.commit()
     return jsonify(topic.to_dict())
@@ -419,7 +473,7 @@ def api_submit_report(topic_id):
 
     report = Report(de_tai_id=topic.id, loai_bao_cao=2, file_path=file_path, trang_thai=0)
     db.session.add(report)
-    topic.trang_thai = TopicStatus.CHO_NGHIEM_THU
+    topic.trang_thai = TopicStatus.DA_NOP_BAO_CAO
     topic.ly_do = None
     db.session.commit()
     return jsonify({"ok": True, "report_id": report.id, "topic": topic.to_dict()})
@@ -450,16 +504,18 @@ def api_my_topics():
 
 
 @api_bp.get("/accounts")
+@login_required
 def api_accounts():
     auth_error = _require_admin_json()
     if auth_error:
         return auth_error
 
     accounts = Account.query.options(joinedload(Account.student)).order_by(Account.id.desc()).all()
-    return jsonify([account.to_dict() for account in accounts])
+    return _json_success("Fetched accounts successfully", [account.to_dict() for account in accounts])
 
 
 @api_bp.post("/accounts")
+@login_required
 def api_create_account():
     auth_error = _require_admin_json()
     if auth_error:
@@ -469,7 +525,7 @@ def api_create_account():
     username = (payload.get("username") or "").strip()
     email = (payload.get("email") or "").strip()
     password = (payload.get("password") or "123456").strip()
-    role = (payload.get("role") or "student").strip()
+    role = _normalize_account_role(payload.get("role"))
 
     if not username or not email:
         return _json_error("Missing username or email", 400)
@@ -497,7 +553,7 @@ def api_create_account():
             db.session.add(student)
 
         db.session.commit()
-        return jsonify(account.to_dict()), 201
+        return _json_success("Account created successfully", account.to_dict(), 201)
     except IntegrityError:
         db.session.rollback()
         return _json_error("Tên đăng nhập hoặc email này đã tồn tại. Vui lòng sử dụng thông tin khác.", 400)
@@ -508,6 +564,7 @@ def api_create_account():
 
 
 @api_bp.put("/accounts/<int:account_id>")
+@login_required
 def api_update_account(account_id):
     auth_error = _require_admin_json()
     if auth_error:
@@ -516,9 +573,26 @@ def api_update_account(account_id):
     account = Account.query.options(joinedload(Account.student)).get_or_404(account_id)
     payload = _get_json_payload()
 
-    for field in ["username", "email", "phone", "role"]:
-        if payload.get(field) is not None:
-            setattr(account, field, str(payload.get(field)).strip())
+    # Smart duplicate validation: exclude the current account being updated
+    if payload.get("email"):
+        email = str(payload.get("email")).strip()
+        duplicate = Account.query.filter(Account.email == email, Account.id != account_id).first()
+        if duplicate:
+            return _json_error("Tên đăng nhập hoặc email đã được sử dụng bởi tài khoản khác.", 400)
+        account.email = email
+
+    if payload.get("username"):
+        username = str(payload.get("username")).strip()
+        duplicate = Account.query.filter(Account.username == username, Account.id != account_id).first()
+        if duplicate:
+            return _json_error("Tên đăng nhập hoặc email đã được sử dụng bởi tài khoản khác.", 400)
+        account.username = username
+
+    if payload.get("phone") is not None:
+        account.phone = str(payload.get("phone")).strip()
+
+    if payload.get("role") is not None:
+        account.role = _normalize_account_role(payload.get("role"))
 
     if payload.get("is_active") is not None:
         raw = payload.get("is_active")
@@ -527,17 +601,50 @@ def api_update_account(account_id):
     if payload.get("password"):
         account.set_password(str(payload.get("password")))
 
+    # Handle Student record (create if doesn't exist for student role)
     student = account.student
-    if student:
-        for field, attr in [("mssv", "mssv"), ("ho_ten", "ho_ten"), ("name", "ho_ten"), ("lop", "lop"), ("class", "lop"), ("khoa", "khoa"), ("faculty", "khoa"), ("khoa_hoc", "khoa_hoc"), ("phone", "so_dien_thoai")]:
-            if payload.get(field) is not None:
-                setattr(student, attr, str(payload.get(field)).strip())
+    if account.role == "student":
+        if not student:
+            student = Student(
+                account_id=account.id,
+                mssv=(payload.get("mssv") or "").strip() or account.username,
+                ho_ten=(payload.get("ho_ten") or payload.get("name") or "").strip() or None,
+                lop=(payload.get("lop") or payload.get("class") or "").strip() or None,
+                khoa=(payload.get("khoa") or payload.get("faculty") or "").strip() or None,
+                khoa_hoc=(payload.get("khoa_hoc") or "").strip() or None,
+                so_dien_thoai=(payload.get("phone") or "").strip() or None,
+                ngay_sinh=None,
+            )
+            db.session.add(student)
+        else:
+            # Update existing student record
+            for field, attr in [
+                ("mssv", "mssv"),
+                ("ho_ten", "ho_ten"),
+                ("name", "ho_ten"),
+                ("lop", "lop"),
+                ("class", "lop"),
+                ("khoa", "khoa"),
+                ("faculty", "khoa"),
+                ("khoa_hoc", "khoa_hoc"),
+                ("phone", "so_dien_thoai"),
+            ]:
+                if payload.get(field) is not None:
+                    setattr(student, attr, str(payload.get(field)).strip())
 
-    db.session.commit()
-    return jsonify(account.to_dict())
+    try:
+        db.session.commit()
+        return _json_success("Account updated successfully", account.to_dict())
+    except IntegrityError:
+        db.session.rollback()
+        return _json_error("Tên đăng nhập hoặc email đã được sử dụng bởi tài khoản khác.", 400)
+    except Exception as e:
+        db.session.rollback()
+        return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
 
 
 @api_bp.put("/accounts/<int:account_id>/lock")
+@login_required
 def api_toggle_account_lock(account_id):
     auth_error = _require_admin_json()
     if auth_error:
@@ -550,10 +657,14 @@ def api_toggle_account_lock(account_id):
         raw = payload.get("is_active")
         account.is_active = str(raw).lower() in {"1", "true", "yes", "on"} if isinstance(raw, str) else bool(raw)
     db.session.commit()
-    return jsonify(account.to_dict())
+    return _json_success(
+        "Account unlocked successfully" if account.is_active else "Account locked successfully",
+        account.to_dict(),
+    )
 
 
-@api_bp.post("/accounts/<int:account_id>/reset-password")
+@api_bp.put("/accounts/<int:account_id>/reset-password")
+@login_required
 def api_reset_password(account_id):
     auth_error = _require_admin_json()
     if auth_error:
@@ -563,4 +674,18 @@ def api_reset_password(account_id):
     new_password = (payload.get("password") or "123456").strip()
     account.set_password(new_password)
     db.session.commit()
-    return jsonify({"ok": True, "account": account.to_dict()})
+    return _json_success("Password reset successfully", account.to_dict())
+
+@api_bp.put("/topics/<int:topic_id>/grade")
+def api_topic_grade(topic_id):
+    auth_error = _require_admin_json()
+    if auth_error: return auth_error
+    topic = Topic.query.get_or_404(topic_id)
+    payload = _get_json_payload()
+    topic.cap_giai_thuong = payload.get("cap_giai") or payload.get("cap_giai_thuong")
+    topic.xep_loai_giai = payload.get("xep_loai") or payload.get("xep_loai_giai")
+    topic.trang_thai = TopicStatus.HOAN_THANH
+
+    db.session.commit()
+    return jsonify(topic.to_dict())
+
