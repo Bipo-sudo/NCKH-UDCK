@@ -258,11 +258,9 @@ function renderDetailActionButtons(status, topicId) {
 
   if (status === 1 || status === 2) {
     container.innerHTML = `
-      <form method="post" action="/admin/topic/${topicId}/approve" class="d-inline">
-        <button class="btn btn-success" type="submit">Duyệt đề tài</button>
-      </form>
-      <button class="btn btn-warning" type="button" onclick="openReasonModal('/admin/topic/${topicId}/require-revision')">Yêu cầu sửa</button>
-      <button class="btn btn-danger" type="button" onclick="openReasonModal('/admin/topic/${topicId}/reject')">Từ chối</button>
+      <button class="btn btn-success" type="button" onclick="openAdminActionPrompt('stage2','approve', ${topicId})">Duyệt đề tài</button>
+      <button class="btn btn-warning" type="button" onclick="openAdminActionPrompt('stage2','revision', ${topicId})">Yêu cầu sửa</button>
+      <button class="btn btn-danger" type="button" onclick="openAdminActionPrompt('stage2','reject', ${topicId})">Từ chối</button>
       <button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
     `;
     return;
@@ -270,11 +268,9 @@ function renderDetailActionButtons(status, topicId) {
 
   if (status === 5 || status === 6) {
     container.innerHTML = `
-      <form method="post" action="/admin/topic/${topicId}/final-accept" class="d-inline">
-        <button class="btn btn-success" type="submit">Nghiệm thu Đạt</button>
-      </form>
-      <button class="btn btn-warning" type="button" onclick="openReasonModal('/admin/topic/${topicId}/final-require-revision')">Đạt nhưng cần sửa</button>
-      <button class="btn btn-danger" type="button" onclick="openReasonModal('/admin/topic/${topicId}/final-reject')">Không Đạt</button>
+      <button class="btn btn-success" type="button" onclick="openAdminActionPrompt('stage4','accept', ${topicId})">Nghiệm thu Đạt</button>
+      <button class="btn btn-warning" type="button" onclick="openAdminActionPrompt('stage4','revision', ${topicId})">Đạt nhưng cần sửa</button>
+      <button class="btn btn-danger" type="button" onclick="openAdminActionPrompt('stage4','reject', ${topicId})">Không Đạt</button>
       <button class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
     `;
     return;
@@ -287,6 +283,23 @@ let reasonTargetAction = '';
 let reasonModalInstance = null;
 
 function openReasonModal(actionUrl) {
+  if (window.AdminUi && window.AdminUi.confirmDialog) {
+    window.AdminUi.confirmDialog({
+      title: 'Nhập lý do',
+      message: 'Vui lòng nhập lý do chi tiết.',
+      confirmText: 'Xác nhận',
+      confirmVariant: 'primary',
+      requireReason: true,
+      reasonPlaceholder: 'Nhập lý do chi tiết...'
+    }).then((result) => {
+      if (result.confirmed) {
+        reasonTargetAction = actionUrl;
+        submitReason(result.reason);
+      }
+    });
+    return;
+  }
+
   reasonTargetAction = actionUrl;
   document.getElementById('reasonInput').value = '';
   const modalEl = document.getElementById('reasonModal');
@@ -294,8 +307,8 @@ function openReasonModal(actionUrl) {
   reasonModalInstance.show();
 }
 
-function submitReason() {
-  const reason = document.getElementById('reasonInput').value.trim();
+function submitReason(reasonValue) {
+  const reason = (reasonValue ?? document.getElementById('reasonInput').value).trim();
   if (!reason) {
     alert('Vui lòng nhập lý do.');
     return;
@@ -315,4 +328,5 @@ function submitReason() {
   form.submit();
 }
 </script>
+<script src="{{ url_for('static', filename='js/admin-topics.js') }}"></script>
 {% endblock %}

@@ -47,6 +47,7 @@ function adminPeriodsInit() {
   
   const savePeriodBtn = document.getElementById('savePeriodBtn');
   const addPeriodModalEl = document.getElementById('addPeriodModal');
+  const ui = window.AdminUi;
 
   if (!tableBody || !filterYear || !savePeriodBtn) {
     return;
@@ -253,7 +254,14 @@ function adminPeriodsInit() {
       return response.json();
     }).then(async function (data) {
       if (addPeriodModal) addPeriodModal.hide();
-      alert('Thành công: ' + (data.message || 'Lưu đợt NCKH thành công!'));
+      if (ui && ui.showToast) {
+        ui.showToast({
+          title: 'Lưu đợt thành công',
+          message: data.message || 'Lưu đợt NCKH thành công!'
+        });
+      } else {
+        alert('Thành công: ' + (data.message || 'Lưu đợt NCKH thành công!'));
+      }
       
       // Xóa form sau khi tạo thành công
       if(!isEditing) {
@@ -272,7 +280,16 @@ function adminPeriodsInit() {
     const periodId = Number(id);
     if (!periodId) return;
 
-    if (!confirm('Bạn có chắc chắn muốn xóa đợt NCKH này? Toàn bộ đề tài thuộc đợt này cũng có thể bị ảnh hưởng!')) {
+    const confirmed = ui && ui.confirmDialog
+      ? await ui.confirmDialog({
+          title: 'Xóa đợt NCKH',
+          message: 'Bạn có chắc chắn muốn xóa đợt NCKH này? Toàn bộ đề tài thuộc đợt này cũng có thể bị ảnh hưởng!',
+          confirmText: 'Xóa',
+          confirmVariant: 'danger'
+        })
+      : { confirmed: true };
+
+    if (!confirmed.confirmed) {
       return;
     }
 
@@ -287,7 +304,14 @@ function adminPeriodsInit() {
         throw new Error(message);
       }
 
-      alert('Xóa đợt thành công!');
+      if (ui && ui.showToast) {
+        ui.showToast({
+          title: 'Xóa đợt thành công',
+          message: 'Đợt NCKH đã được xóa.'
+        });
+      } else {
+        alert('Xóa đợt thành công!');
+      }
       await fetchPeriods();
       renderByCurrentFilter();
     } catch (error) {

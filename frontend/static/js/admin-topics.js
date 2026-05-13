@@ -1,9 +1,10 @@
 function adminTopicsAltInit() {
   let currentTopics = [];
   let filteredTopics = [];
+  const ui = window.AdminUi;
 
   const tableBody = document.getElementById('topicsTableBody');
-  if (!tableBody) return;
+  const hasTopicsTable = !!tableBody;
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -40,6 +41,7 @@ function adminTopicsAltInit() {
   }
 
   function statusMessage(message) {
+    if (!tableBody) return;
     tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">${message}</td></tr>`;
   }
 
@@ -73,6 +75,8 @@ function adminTopicsAltInit() {
   }
 
   function renderTopicsTable() {
+    if (!tableBody) return;
+
     const yearFilterEl = document.getElementById('filterTopicYear');
     const statusFilterEl = document.getElementById('filterTopicStatus');
     const yearFilter = yearFilterEl?.value || '';
@@ -107,19 +111,19 @@ function adminTopicsAltInit() {
         <td>${formatDate(topic.created_at || topic.updated_at)}</td>
         <td>
           <div class="action-buttons">
-            <button class="btn-action view" title="Xem chi tiết hồ sơ" onclick="showTopicDetail(${topic.id})" data-bs-toggle="offcanvas" data-bs-target="#topicDetailOffcanvas"><i class="fas fa-eye"></i></button>
+            <button class="btn-action view" title="Xem chi tiết hồ sơ" onclick="showTopicDetailById(${topic.id})" data-bs-toggle="offcanvas" data-bs-target="#topicDetailOffcanvas"><i class="fas fa-eye"></i></button>
             ${(topic.status === 1 || topic.status === 2 || topic.trang_thai === 1 || topic.trang_thai === 2) ? `
                   <button class="btn-action approve" title="Duyệt đề tài" onclick="applyAdminAction('stage2','approve', ${topic.id})"><i class="fas fa-check"></i></button>
-                  <button class="btn-action edit" title="Yêu cầu sửa" onclick="applyAdminAction('stage2','revision', ${topic.id}, prompt('Nhập lý do yêu cầu sửa') )"><i class="fas fa-edit"></i></button>
-                  <button class="btn-action reject" title="Từ chối" onclick="applyAdminAction('stage2','reject', ${topic.id}, prompt('Nhập lý do từ chối') )"><i class="fas fa-times"></i></button>
+              <button class="btn-action edit" title="Yêu cầu sửa" onclick="openAdminActionPrompt('stage2','revision', ${topic.id})"><i class="fas fa-edit"></i></button>
+              <button class="btn-action reject" title="Từ chối" onclick="openAdminActionPrompt('stage2','reject', ${topic.id})"><i class="fas fa-times"></i></button>
                 ` : ''}
             ${(topic.status === 7 || topic.trang_thai === 7 || topic.status === 8 || topic.trang_thai === 8) ? `
                   <button class="btn-action approve" title="Duyệt báo cáo" onclick="applyAdminAction('stage4','approve_report', ${topic.id})"><i class="fas fa-check"></i></button>
-                  <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="applyAdminAction('stage4','require_report_revision', ${topic.id}, prompt('Nhập lý do yêu cầu sửa báo cáo') )"><i class="fas fa-pen"></i></button>
+              <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="openAdminActionPrompt('stage4','require_report_revision', ${topic.id})"><i class="fas fa-pen"></i></button>
                 ` : ''}
             ${(topic.status === 9 || topic.trang_thai === 9) ? `
                   <button class="btn-action approve" title="Chấm điểm/Hoàn thành" onclick="openGradingModal(${topic.id})"><i class="fas fa-trophy"></i></button>
-                  <button class="btn-action reject" title="Không thành công" onclick="applyAdminAction('stage5','fail_defense', ${topic.id}, prompt('Nhập lý do Không thành công') )"><i class="fas fa-times"></i></button>
+              <button class="btn-action reject" title="Không thành công" onclick="openAdminActionPrompt('stage5','fail_defense', ${topic.id})"><i class="fas fa-times"></i></button>
                 ` : ''}
           </div>
         </td>
@@ -127,7 +131,7 @@ function adminTopicsAltInit() {
     `).join('');
   }
 
-  function showTopicDetail(topicId) {
+  function showTopicDetailById(topicId) {
     const topic = currentTopics.find((item) => Number(item.id) === Number(topicId));
     if (!topic) return;
 
@@ -200,25 +204,61 @@ function adminTopicsAltInit() {
     container.innerHTML = '<button class="btn btn-secondary" data-bs-dismiss="offcanvas">Đóng</button>';
   }
 
-  function openAdminActionPrompt(stage, action, topicId) {
+  async function openAdminActionPrompt(stage, action, topicId) {
+    let title = 'Xác nhận thao tác';
     let message = '';
+    let requireReason = false;
+    let confirmText = 'Xác nhận';
+    let confirmVariant = 'primary';
     if (stage === 'stage2') {
-      if (action === 'approve') message = 'Xác nhận duyệt đề tài này?';
-      else if (action === 'revision') message = 'Nhập lý do yêu cầu chỉnh sửa đề xuất:';
-      else if (action === 'reject') message = 'Nhập lý do từ chối đề tài:';
+      if (action === 'approve') {
+        title = 'Duyệt đề tài';
+        message = 'Xác nhận duyệt đề tài này?';
+        confirmText = 'Duyệt';
+        confirmVariant = 'success';
+      } else if (action === 'revision') {
+        title = 'Yêu cầu sửa đề tài';
+        message = 'Nhập lý do yêu cầu chỉnh sửa đề xuất:';
+        requireReason = true;
+      } else if (action === 'reject') {
+        title = 'Từ chối đề tài';
+        message = 'Nhập lý do từ chối đề tài:';
+        requireReason = true;
+        confirmText = 'Từ chối';
+        confirmVariant = 'danger';
+      }
     } else if (stage === 'stage4') {
-      if (action === 'accept') message = 'Xác nhận nghiệm thu Đạt đề tài này?';
-      else if (action === 'revision') message = 'Nhập lý do Đạt nhưng cần sửa báo cáo:';
-      else if (action === 'reject') message = 'Nhập lý do Không Đạt:';
+      if (action === 'accept') {
+        title = 'Nghiệm thu đề tài';
+        message = 'Xác nhận nghiệm thu Đạt đề tài này?';
+        confirmText = 'Đạt';
+        confirmVariant = 'success';
+      } else if (action === 'revision') {
+        title = 'Yêu cầu sửa báo cáo';
+        message = 'Nhập lý do Đạt nhưng cần sửa báo cáo:';
+        requireReason = true;
+      } else if (action === 'reject') {
+        title = 'Không đạt';
+        message = 'Nhập lý do Không Đạt:';
+        requireReason = true;
+        confirmText = 'Không đạt';
+        confirmVariant = 'danger';
+      }
     }
 
-    if (action === 'approve' || action === 'accept') {
-      if (window.confirm(message)) applyAdminAction(stage, action, topicId);
-      return;
-    }
+    const result = ui && ui.confirmDialog
+      ? await ui.confirmDialog({
+          title,
+          message,
+          confirmText,
+          confirmVariant,
+          requireReason,
+          reasonPlaceholder: message,
+        })
+      : { confirmed: true, reason: '' };
 
-    const reason = window.prompt(message);
-    if (reason !== null) applyAdminAction(stage, action, topicId, reason);
+    if (!result.confirmed) return;
+    await applyAdminAction(stage, action, topicId, result.reason || '');
   }
 
   async function applyAdminAction(stage, action, topicId, reason) {
@@ -231,13 +271,16 @@ function adminTopicsAltInit() {
         body: JSON.stringify({ reason: reason || '' })
       });
       if (!resp.ok) {
-        alert('Lỗi khi thực hiện thao tác.');
+        if (ui && ui.showToast) ui.showToast({ title: 'Lỗi', message: 'Lỗi khi thực hiện thao tác.', variant: 'danger' });
+        else alert('Lỗi khi thực hiện thao tác.');
         return;
       }
       await fetchTopics();
       renderTopicsTable();
+      if (ui && ui.showToast) ui.showToast({ title: 'Thành công', message: 'Đã cập nhật đề tài thành công.' });
     } catch (err) {
-      alert('Không thể kết nối server.');
+      if (ui && ui.showToast) ui.showToast({ title: 'Lỗi', message: 'Không thể kết nối server.', variant: 'danger' });
+      else alert('Không thể kết nối server.');
     }
   }
 
@@ -256,10 +299,10 @@ function adminTopicsAltInit() {
     if (status === 1 || status === 2) {
       return `
         <div class="action-buttons">
-          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetailById(${topicId})"><i class="fas fa-eye"></i></button>
           <button class="btn-action approve" title="Duyệt đề tài" onclick="applyAdminAction('stage2','approve', ${topicId})"><i class="fas fa-check"></i></button>
-          <button class="btn-action edit" title="Yêu cầu sửa" onclick="applyAdminAction('stage2','require_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa'))"><i class="fas fa-edit"></i></button>
-          <button class="btn-action reject" title="Từ chối" onclick="applyAdminAction('stage2','reject', ${topicId}, prompt('Nhập lý do từ chối'))"><i class="fas fa-times"></i></button>
+          <button class="btn-action edit" title="Yêu cầu sửa" onclick="openAdminActionPrompt('stage2','revision', ${topicId})"><i class="fas fa-edit"></i></button>
+          <button class="btn-action reject" title="Từ chối" onclick="openAdminActionPrompt('stage2','reject', ${topicId})"><i class="fas fa-times"></i></button>
         </div>
       `;
     }
@@ -268,9 +311,9 @@ function adminTopicsAltInit() {
     if (status === 7 || status === 8) {
       return `
         <div class="action-buttons">
-          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetailById(${topicId})"><i class="fas fa-eye"></i></button>
           <button class="btn-action approve" title="Duyệt báo cáo" onclick="applyAdminAction('stage4','approve_report', ${topicId})"><i class="fas fa-check"></i></button>
-          <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="applyAdminAction('stage4','require_report_revision', ${topicId}, prompt('Nhập lý do yêu cầu sửa báo cáo'))"><i class="fas fa-pen"></i></button>
+          <button class="btn-action edit" title="Yêu cầu sửa BC" onclick="openAdminActionPrompt('stage4','revision', ${topicId})"><i class="fas fa-pen"></i></button>
         </div>
       `;
     }
@@ -279,9 +322,9 @@ function adminTopicsAltInit() {
     if (status === 9) {
       return `
         <div class="action-buttons">
-          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+          <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetailById(${topicId})"><i class="fas fa-eye"></i></button>
           <button class="btn-action approve" title="Chấm điểm/Hoàn thành" onclick="openGradingModal(${topicId})"><i class="fas fa-trophy"></i></button>
-          <button class="btn-action reject" title="Không thành công" onclick="applyAdminAction('stage5','fail_defense', ${topicId}, prompt('Nhập lý do Không thành công'))"><i class="fas fa-times"></i></button>
+          <button class="btn-action reject" title="Không thành công" onclick="openAdminActionPrompt('stage5','fail_defense', ${topicId})"><i class="fas fa-times"></i></button>
         </div>
       `;
     }
@@ -289,7 +332,7 @@ function adminTopicsAltInit() {
     // Default: only view
     return `
       <div class="action-buttons">
-        <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetail(${topicId})"><i class="fas fa-eye"></i></button>
+        <button class="btn-action view" title="Xem chi tiết" onclick="showTopicDetailById(${topicId})"><i class="fas fa-eye"></i></button>
       </div>
     `;
 }
@@ -331,30 +374,34 @@ window.submitGrading = async function(topicId) {
 
         if (!resp.ok) throw new Error('Không thể lưu kết quả');
         
-        alert('Đã ghi nhận điểm và giải thưởng thành công!');
+        if (ui && ui.showToast) ui.showToast({ title: 'Thành công', message: 'Đã ghi nhận điểm và giải thưởng thành công!' });
+        else alert('Đã ghi nhận điểm và giải thưởng thành công!');
         bootstrap.Modal.getInstance(document.getElementById('awardModal')).hide();
         
         // Tải lại danh sách
         await fetchTopics(currentPeriodId);
     } catch (err) {
-        alert(err.message);
+        if (ui && ui.showToast) ui.showToast({ title: 'Lỗi', message: err.message, variant: 'danger' });
+        else alert(err.message);
     }
 };
 
-  window.showTopicDetail = showTopicDetail;
+  window.showTopicDetailById = showTopicDetailById;
   window.openGradingModal = openGradingModal;
   window.submitGrading = submitGrading;
   window.openAdminActionPrompt = openAdminActionPrompt;
   window.applyAdminAction = applyAdminAction;
 
   (async function init() {
-    await fetchTopics();
-    if (!currentTopics.length) {
-      statusMessage('Không có dữ liệu thực');
-      return;
+    if (hasTopicsTable) {
+      await fetchTopics();
+      if (!currentTopics.length) {
+        statusMessage('Không có dữ liệu thực');
+        return;
+      }
+      setupListeners();
+      renderTopicsTable();
     }
-    setupListeners();
-    renderTopicsTable();
   })();
 }
 
