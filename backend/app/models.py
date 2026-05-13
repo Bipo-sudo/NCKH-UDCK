@@ -83,7 +83,10 @@ class Account(UserMixin, db.Model):
             "is_active": self.is_active,
         }
         if student:
-            payload.update(student.to_dict())
+            student_payload = student.to_dict()
+            student_payload.pop("id", None)
+            student_payload.pop("account_id", None)
+            payload.update(student_payload)
         return payload
 
     @property

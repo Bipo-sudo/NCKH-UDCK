@@ -4,6 +4,7 @@ function adminAccountsInit() {
   let currentPage = 1;
   const itemsPerPage = 10;
   let accountModalInstance = null;
+  let feedbackToastContainer = null;
 
   const tableBody = document.getElementById('accountsTableBody');
   if (!tableBody) return;
@@ -255,6 +256,61 @@ function adminAccountsInit() {
     return (currentAccounts || []).find(account => account.id === id) || null;
   }
 
+  function ensureFeedbackToastContainer() {
+    if (feedbackToastContainer && document.body.contains(feedbackToastContainer)) {
+      return feedbackToastContainer;
+    }
+
+    feedbackToastContainer = document.getElementById('accountFeedbackToastContainer');
+    if (!feedbackToastContainer) {
+      feedbackToastContainer = document.createElement('div');
+      feedbackToastContainer.id = 'accountFeedbackToastContainer';
+      feedbackToastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+      feedbackToastContainer.style.zIndex = '1080';
+      document.body.appendChild(feedbackToastContainer);
+    }
+
+    return feedbackToastContainer;
+  }
+
+  function showSuccessToast(message, title) {
+    if (!window.bootstrap || !bootstrap.Toast) {
+      alert(message);
+      return;
+    }
+
+    const container = ensureFeedbackToastContainer();
+    const toastEl = document.createElement('div');
+    toastEl.className = 'toast align-items-center text-bg-success border-0 shadow';
+    toastEl.setAttribute('role', 'status');
+    toastEl.setAttribute('aria-live', 'polite');
+    toastEl.setAttribute('aria-atomic', 'true');
+    toastEl.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          <div class="fw-semibold mb-1">${escapeHtml(title || 'Thành công')}</div>
+          <div>${escapeHtml(message)}</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+      </div>
+    `;
+
+    container.appendChild(toastEl);
+    toastEl.addEventListener('hidden.bs.toast', function () {
+      toastEl.remove();
+    });
+    new bootstrap.Toast(toastEl, { delay: 2600 }).show();
+  }
+
+  async function handleMutation404(response) {
+    if (response.status !== 404) return false;
+    alert('Tài khoản không còn tồn tại hoặc dữ liệu đã cũ. Vui lòng tải lại danh sách.');
+    await fetchAccounts();
+    initToolbarOptions();
+    filterAccounts();
+    return true;
+  }
+
   function setModalMode(isEdit) {
     const title = document.getElementById('accountModalTitle');
     const submitButton = document.getElementById('accountSubmitButton');
@@ -356,6 +412,7 @@ function adminAccountsInit() {
       filterAccounts();
       ensureModalInstance();
       if (accountModalInstance) accountModalInstance.hide();
+      showSuccessToast(editId ? 'Đã cập nhật tài khoản thành công.' : 'Đã tạo tài khoản mới thành công.', editId ? 'Sửa tài khoản thành công' : 'Thêm tài khoản thành công');
     }).catch(function () {
       alert('Lưu tài khoản thất bại. Vui lòng thử lại.');
     });
@@ -391,17 +448,26 @@ function adminAccountsInit() {
 
   window.toggleLockAccount = function (id) {
     const account = getAccountById(id);
-    if (!account) return;
+    if (!account) {
+      alert('Tài khoản không còn tồn tại hoặc dữ liệu đã cũ. Vui lòng tải lại danh sách.');
+      fetchAccounts().then(function () {
+        initToolbarOptions();
+        filterAccounts();
+      });
+      return;
+    }
     fetch(`/api/accounts/${id}/lock`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: !account.isActive }),
     }).then(async function (response) {
+      if (await handleMutation404(response)) return null;
       if (!response.ok) throw new Error('lock failed');
       return response.json();
     }).then(async function () {
       await fetchAccounts();
       filterAccounts();
+      showSuccessToast('Đã cập nhật trạng thái tài khoản.', 'Khóa / mở khóa thành công');
     }).catch(function () {
       alert('Cập nhật trạng thái tài khoản thất bại.');
     });
@@ -409,7 +475,14 @@ function adminAccountsInit() {
 
   window.editAccount = function (id) {
     const account = getAccountById(id);
-    if (!account) return;
+    if (!account) {
+      alert('Tài khoản không còn tồn tại hoặc dữ liệu đã cũ. Vui lòng tải lại danh sách.');
+      fetchAccounts().then(function () {
+        initToolbarOptions();
+        filterAccounts();
+      });
+      return;
+    }
     fillFormFromAccount(account);
     setModalMode(true);
     ensureModalInstance();
@@ -422,10 +495,11 @@ function adminAccountsInit() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: '123456' }),
     }).then(async function (response) {
+      if (await handleMutation404(response)) return null;
       if (!response.ok) throw new Error('reset failed');
       return response.json();
     }).then(function () {
-      alert('Đã reset mật khẩu');
+      showSuccessToast('Mật khẩu đã được đặt lại về 123456.', 'Reset mật khẩu thành công');
       return fetchAccounts();
     }).catch(function () {
       alert('Reset mật khẩu thất bại.');
@@ -433,10 +507,12 @@ function adminAccountsInit() {
   };
 
   window.deleteAccount = function (id) {
-    fetch(`/api/accounts/${id}`, {
-      method: 'DELETE',
+    fetch('/api/accounts-delete', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account_id: id }),
     }).then(async function (response) {
+      if (await handleMutation404(response)) return null;
       if (!response.ok) {
         const message = await response.text();
         throw new Error(message || 'delete failed');
@@ -446,7 +522,7 @@ function adminAccountsInit() {
       await fetchAccounts();
       initToolbarOptions();
       filterAccounts();
-      alert('Đã xóa tài khoản');
+      showSuccessToast('Tài khoản đã được xóa khỏi hệ thống.', 'Xóa tài khoản thành công');
     }).catch(function () {
       alert('Xóa tài khoản thất bại.');
     });

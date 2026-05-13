@@ -563,29 +563,9 @@ def api_create_account():
         return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
 
 
-@api_bp.route("/accounts/<int:account_id>", methods=["PUT", "DELETE"])
+@api_bp.put("/accounts/<int:account_id>")
 @login_required
-def api_account_put_delete(account_id):
-    if request.method == "DELETE":
-        auth_error = _require_admin_json()
-        if auth_error:
-            return auth_error
-
-        account = Account.query.options(joinedload(Account.student)).get_or_404(account_id)
-        if account.id == current_user.id:
-            return _json_error("Không thể tự xóa tài khoản đang đăng nhập.", 400)
-        if account.is_admin:
-            return _json_error("Không thể xóa tài khoản quản trị.", 400)
-
-        try:
-            db.session.delete(account)
-            db.session.commit()
-            return _json_success("Account deleted successfully", {"id": account_id})
-        except Exception as e:
-            db.session.rollback()
-            return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
-    
-    # PUT: update account
+def api_update_account(account_id):
     auth_error = _require_admin_json()
     if auth_error:
         return auth_error
@@ -659,6 +639,38 @@ def api_account_put_delete(account_id):
         return _json_error("Tên đăng nhập hoặc email đã được sử dụng bởi tài khoản khác.", 400)
     except Exception as e:
         db.session.rollback()
+        return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
+
+
+@api_bp.route("/accounts-delete", methods=["POST"])
+@login_required
+def api_delete_account():
+    auth_error = _require_admin_json()
+    if auth_error:
+        return auth_error
+
+    payload = _get_json_payload()
+    account_id = payload.get("account_id")
+    
+    if not account_id:
+        return _json_error("Missing account_id", 400)
+    
+    print(f"DEBUG: api_delete_account called with id={account_id}")
+    
+    account = Account.query.options(joinedload(Account.student)).get_or_404(account_id)
+    if account.id == current_user.id:
+        return _json_error("Không thể tự xóa tài khoản đang đăng nhập.", 400)
+    if account.is_admin:
+        return _json_error("Không thể xóa tài khoản quản trị.", 400)
+
+    try:
+        db.session.delete(account)
+        db.session.commit()
+        print(f"DEBUG: Account {account_id} deleted successfully")
+        return _json_success("Account deleted successfully", {"id": account_id})
+    except Exception as e:
+        db.session.rollback()
+        print(f"DEBUG: Error deleting account {account_id}: {str(e)}")
         return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
 
 
