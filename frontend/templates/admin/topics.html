@@ -24,7 +24,7 @@
       <select class="form-select" id="filterStudent" onchange="filterTopics()" style="max-width: 260px;">
         <option value="">Tất cả sinh viên</option>
         {% for acc in accounts %}
-        <option value="{{ acc.id }}">{{ acc.ho_ten }} ({{ acc.mssv }})</option>
+        <option value="{{ acc.student.id if acc.student else acc.id }}">{{ acc.student.ho_ten if acc.student and acc.student.ho_ten else acc.username }}{% if acc.student and acc.student.mssv %} ({{ acc.student.mssv }}){% endif %}</option>
         {% endfor %}
       </select>
 
@@ -56,27 +56,27 @@
         <tbody>
           {% for topic in topics %}
           <tr
-            data-year="{{ topic.dot_dang_ky.nam_hoc if topic.dot_dang_ky else '' }}"
+            data-year="{{ topic.dot.nam_hoc if topic.dot else '' }}"
             data-status="{{ topic.trang_thai }}"
-            data-student="{{ topic.sinh_vien.id if topic.sinh_vien else '' }}"
+            data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}"
           >
             <td>#{{ topic.id }}</td>
             <td>
               <strong>{{ topic.ten_de_tai }}</strong><br>
-              <small class="text-muted">GVHD: {{ topic.giang_vien_huong_dan or 'Chưa cập nhật' }}</small>
+              <small class="text-muted">GVHD: {{ topic.giang_vien_hd or 'Chưa cập nhật' }}</small>
             </td>
             <td>
-              {% if topic.sinh_vien %}
-                {{ topic.sinh_vien.ho_ten }}<br>
-                <small class="text-muted">{{ topic.sinh_vien.mssv }}</small>
+              {% if topic.chu_nhiem %}
+                {{ topic.chu_nhiem.ho_ten or topic.chu_nhiem.account.username }}<br>
+                <small class="text-muted">{{ topic.chu_nhiem.mssv }}</small>
               {% else %}
                 <span class="text-muted">Không có dữ liệu</span>
               {% endif %}
             </td>
             <td>
-              {% if topic.dot_dang_ky %}
-                {{ topic.dot_dang_ky.ten_dot }}<br>
-                <small class="text-muted">{{ topic.dot_dang_ky.nam_hoc }}</small>
+              {% if topic.dot %}
+                {{ topic.dot.ten_dot }}<br>
+                <small class="text-muted">{{ topic.dot.nam_hoc }}</small>
               {% else %}
                 <span class="text-muted">Chưa gán đợt</span>
               {% endif %}
@@ -111,11 +111,11 @@
                 data-topic-id="{{ topic.id }}"
                 data-topic-title="{{ topic.ten_de_tai }}"
                 data-topic-status="{{ topic.trang_thai }}"
-                data-topic-period="{{ topic.dot_dang_ky.ten_dot if topic.dot_dang_ky else '' }}"
-                data-topic-year="{{ topic.dot_dang_ky.nam_hoc if topic.dot_dang_ky else '' }}"
-                data-topic-author="{{ topic.sinh_vien.ho_ten if topic.sinh_vien else '' }}"
-                data-topic-mssv="{{ topic.sinh_vien.mssv if topic.sinh_vien else '' }}"
-                data-topic-objective="{{ topic.mo_ta or '' }}"
+                data-topic-period="{{ topic.dot.ten_dot if topic.dot else '' }}"
+                data-topic-year="{{ topic.dot.nam_hoc if topic.dot else '' }}"
+                data-topic-author="{{ topic.chu_nhiem.ho_ten if topic.chu_nhiem else '' }}"
+                data-topic-mssv="{{ topic.chu_nhiem.mssv if topic.chu_nhiem else '' }}"
+                data-topic-objective="{{ topic.muc_tieu or '' }}"
                 data-topic-reason="{{ topic.ly_do or '' }}"
                 onclick="showTopicDetail(this)"
               >

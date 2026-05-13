@@ -1,8 +1,9 @@
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, send_file, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload
 from ..extensions import db
-from ..models import Topic, TopicStatus, RegistrationPeriod, Report, Notification, Account, Student
+from ..models import Topic, TopicStatus, RegistrationPeriod, Report, Notification, Account, Student, TopicMember
 from ..utils import check_auto_fail
 
 admin_bp = Blueprint("admin", __name__)
@@ -337,11 +338,24 @@ def accounts_alias():
 def topics():
     _ensure_admin()
     check_auto_fail()
+    topics = Topic.query.options(
+        joinedload(Topic.dot),
+        joinedload(Topic.chu_nhiem).joinedload(Student.account),
+        joinedload(Topic.member_links).joinedload(TopicMember.sinh_vien).joinedload(Student.account),
+    ).order_by(Topic.id.desc()).all()
     periods = RegistrationPeriod.query.order_by(RegistrationPeriod.id.desc()).all()
+    accounts = Account.query.options(joinedload(Account.student)).order_by(Account.id.desc()).all()
     current_period = _get_current_period(periods)
     current_period_data = _serialize_period(current_period) if current_period else None
     periods_data = [_serialize_period(period) for period in periods]
-    return render_template("admin/topics.html", current_period_data=current_period_data, periods_data=periods_data)
+    return render_template(
+        "admin/topics.html",
+        topics=topics,
+        periods=periods,
+        accounts=accounts,
+        current_period_data=current_period_data,
+        periods_data=periods_data,
+    )
 
 
 @admin_bp.route("/admin_topics.html")
