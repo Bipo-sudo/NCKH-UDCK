@@ -563,9 +563,29 @@ def api_create_account():
         return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
 
 
-@api_bp.put("/accounts/<int:account_id>")
+@api_bp.route("/accounts/<int:account_id>", methods=["PUT", "DELETE"])
 @login_required
-def api_update_account(account_id):
+def api_account_put_delete(account_id):
+    if request.method == "DELETE":
+        auth_error = _require_admin_json()
+        if auth_error:
+            return auth_error
+
+        account = Account.query.options(joinedload(Account.student)).get_or_404(account_id)
+        if account.id == current_user.id:
+            return _json_error("Không thể tự xóa tài khoản đang đăng nhập.", 400)
+        if account.is_admin:
+            return _json_error("Không thể xóa tài khoản quản trị.", 400)
+
+        try:
+            db.session.delete(account)
+            db.session.commit()
+            return _json_success("Account deleted successfully", {"id": account_id})
+        except Exception as e:
+            db.session.rollback()
+            return _json_error(f"Lỗi hệ thống: {str(e)}", 500)
+    
+    # PUT: update account
     auth_error = _require_admin_json()
     if auth_error:
         return auth_error
@@ -617,7 +637,6 @@ def api_update_account(account_id):
             )
             db.session.add(student)
         else:
-            # Update existing student record
             for field, attr in [
                 ("mssv", "mssv"),
                 ("ho_ten", "ho_ten"),
@@ -675,6 +694,7 @@ def api_reset_password(account_id):
     account.set_password(new_password)
     db.session.commit()
     return _json_success("Password reset successfully", account.to_dict())
+
 
 @api_bp.put("/topics/<int:topic_id>/grade")
 def api_topic_grade(topic_id):

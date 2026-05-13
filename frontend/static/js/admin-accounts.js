@@ -197,6 +197,9 @@ function adminAccountsInit() {
             <button class="btn-action key" title="Reset mật khẩu" type="button" onclick="if (confirmAction('Reset mật khẩu về 123456?')) resetPasswordAccount(${account.id})">
               <i class="fas fa-key"></i>
             </button>
+            <button class="btn-action delete" title="Xóa tài khoản" type="button" onclick="if (confirmAction('Bạn có chắc muốn xóa tài khoản này?')) deleteAccount(${account.id})">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
         </td>
       </tr>
@@ -426,6 +429,26 @@ function adminAccountsInit() {
       return fetchAccounts();
     }).catch(function () {
       alert('Reset mật khẩu thất bại.');
+    });
+  };
+
+  window.deleteAccount = function (id) {
+    fetch(`/api/accounts/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    }).then(async function (response) {
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || 'delete failed');
+      }
+      return response.json();
+    }).then(async function () {
+      await fetchAccounts();
+      initToolbarOptions();
+      filterAccounts();
+      alert('Đã xóa tài khoản');
+    }).catch(function () {
+      alert('Xóa tài khoản thất bại.');
     });
   };
 
