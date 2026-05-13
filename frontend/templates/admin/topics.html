@@ -6,6 +6,26 @@
   <h1 class="page-title">Quản lý Đề tài</h1>
 </div>
 
+<div class="alert alert-info border-0 shadow-sm">
+  <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+    <div>
+      <div class="fw-bold">Đợt hiện hành</div>
+      {% if current_period_data %}
+        <div>{{ current_period_data.ten_dot }} - {{ current_period_data.nam_hoc }}</div>
+        <div class="small text-muted">Giai đoạn: {{ current_period_phase_label }}</div>
+      {% else %}
+        <div>Chưa xác định được đợt hiện hành.</div>
+      {% endif %}
+    </div>
+    <div class="text-end">
+      <div class="fw-bold">Ràng buộc trạng thái</div>
+      <div class="small text-muted">
+        {% if current_period_phase == 1 %}Chỉ hiển thị đề tài chờ duyệt / đã duyệt trong đợt đang mở đăng ký.{% elif current_period_phase == 2 %}Chỉ hiển thị đề tài đang thực hiện.{% elif current_period_phase == 3 %}Chỉ hiển thị đề tài đã nộp báo cáo hoặc đang chỉnh sửa báo cáo.{% elif current_period_phase == 4 %}Chỉ hiển thị đề tài đã nộp báo cáo và chờ bảo vệ.{% elif current_period_phase == 5 %}Chỉ hiển thị đề tài chờ bảo vệ / đã hoàn thành của đợt hiện hành.{% else %}Toàn bộ đề tài sẽ được phân loại theo năm học.{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="content-card">
   <div class="card-header-custom">
     <h5>Danh sách đề tài</h5>
@@ -16,7 +36,7 @@
         <option value="">Tất cả năm học</option>
         {% for p in periods %}
           {% if p.nam_hoc %}
-          <option value="{{ p.nam_hoc }}">{{ p.nam_hoc }}</option>
+          <option value="{{ p.nam_hoc }}" {% if current_period_data and p.nam_hoc == current_period_data.nam_hoc %}selected{% endif %}>{{ p.nam_hoc }}</option>
           {% endif %}
         {% endfor %}
       </select>
@@ -54,12 +74,8 @@
           </tr>
         </thead>
         <tbody>
-          {% for topic in topics %}
-          <tr
-            data-year="{{ topic.dot.nam_hoc if topic.dot else '' }}"
-            data-status="{{ topic.trang_thai }}"
-            data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}"
-          >
+          {% macro topic_row(topic) -%}
+          <tr data-year="{{ topic.dot.nam_hoc if topic.dot else '' }}" data-status="{{ topic.trang_thai }}" data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}">
             <td>#{{ topic.id }}</td>
             <td>
               <strong>{{ topic.ten_de_tai }}</strong><br>
@@ -82,50 +98,53 @@
               {% endif %}
             </td>
             <td>
-              {% if topic.trang_thai == 1 %}
-                <span class="badge bg-secondary">Chờ xét duyệt đề xuất</span>
-              {% elif topic.trang_thai == 2 %}
-                <span class="badge bg-warning text-dark">Yêu cầu chỉnh sửa đề xuất</span>
-              {% elif topic.trang_thai == 3 %}
-                <span class="badge bg-dark">Đề tài bị từ chối</span>
-              {% elif topic.trang_thai == 4 %}
-                <span class="badge bg-primary">Đang thực hiện</span>
-              {% elif topic.trang_thai == 5 %}
-                <span class="badge bg-info text-dark">Chờ nghiệm thu</span>
-              {% elif topic.trang_thai == 6 %}
-                <span class="badge bg-warning text-dark">Sửa báo cáo tổng kết</span>
-              {% elif topic.trang_thai == 7 %}
-                <span class="badge bg-danger">Không đạt</span>
-              {% elif topic.trang_thai == 8 %}
-                <span class="badge bg-primary">Đã hoàn thành</span>
-              {% else %}
-                <span class="badge bg-secondary">Không xác định</span>
-              {% endif %}
+              {% if topic.trang_thai == 1 %}<span class="badge bg-secondary">Chờ xét duyệt đề xuất</span>{% elif topic.trang_thai == 2 %}<span class="badge bg-warning text-dark">Yêu cầu chỉnh sửa đề xuất</span>{% elif topic.trang_thai == 3 %}<span class="badge bg-dark">Đề tài bị từ chối</span>{% elif topic.trang_thai == 4 %}<span class="badge bg-primary">Đang thực hiện</span>{% elif topic.trang_thai == 5 %}<span class="badge bg-info text-dark">Chờ nghiệm thu</span>{% elif topic.trang_thai == 6 %}<span class="badge bg-warning text-dark">Sửa báo cáo tổng kết</span>{% elif topic.trang_thai == 7 %}<span class="badge bg-danger">Không đạt</span>{% elif topic.trang_thai == 8 %}<span class="badge bg-primary">Đã hoàn thành</span>{% elif topic.trang_thai == 9 %}<span class="badge bg-info text-dark">Chờ bảo vệ</span>{% elif topic.trang_thai == 10 %}<span class="badge bg-success">Hoàn thành</span>{% elif topic.trang_thai == 11 %}<span class="badge bg-danger">Không thành công</span>{% elif topic.trang_thai == 12 %}<span class="badge bg-dark">Bị hủy</span>{% else %}<span class="badge bg-secondary">Không xác định</span>{% endif %}
             </td>
             <td>
-              <button
-                class="btn btn-sm btn-outline-primary"
-                title="Xem chi tiết"
-                data-bs-toggle="modal"
-                data-bs-target="#topicDetailModal"
-                data-topic-id="{{ topic.id }}"
-                data-topic-title="{{ topic.ten_de_tai }}"
-                data-topic-status="{{ topic.trang_thai }}"
-                data-topic-period="{{ topic.dot.ten_dot if topic.dot else '' }}"
-                data-topic-year="{{ topic.dot.nam_hoc if topic.dot else '' }}"
-                data-topic-author="{{ topic.chu_nhiem.ho_ten if topic.chu_nhiem else '' }}"
-                data-topic-mssv="{{ topic.chu_nhiem.mssv if topic.chu_nhiem else '' }}"
-                data-topic-objective="{{ topic.muc_tieu or '' }}"
-                data-topic-reason="{{ topic.ly_do or '' }}"
-                onclick="showTopicDetail(this)"
-              >
+              <button class="btn btn-sm btn-outline-primary" title="Xem chi tiết" data-bs-toggle="modal" data-bs-target="#topicDetailModal" data-topic-id="{{ topic.id }}" data-topic-title="{{ topic.ten_de_tai }}" data-topic-status="{{ topic.trang_thai }}" data-topic-period="{{ topic.dot.ten_dot if topic.dot else '' }}" data-topic-year="{{ topic.dot.nam_hoc if topic.dot else '' }}" data-topic-author="{{ topic.chu_nhiem.ho_ten if topic.chu_nhiem else '' }}" data-topic-mssv="{{ topic.chu_nhiem.mssv if topic.chu_nhiem else '' }}" data-topic-objective="{{ topic.muc_tieu or '' }}" data-topic-reason="{{ topic.ly_do or '' }}" onclick="showTopicDetail(this)">
                 <i class="fas fa-eye"></i>
               </button>
             </td>
           </tr>
+          {%- endmacro %}
+
+          {% for topic in visible_topics %}
+            {{ topic_row(topic) }}
           {% else %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">Chưa có đề tài nào.</td>
+            <td colspan="6" class="text-center text-muted py-4">Chưa có đề tài nào phù hợp với đợt hiện hành.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="content-card mt-4" {% if not restricted_topics %}style="display:none;"{% endif %}>
+  <div class="card-header-custom d-flex justify-content-between align-items-center gap-2 flex-wrap">
+    <h5>Danh sách riêng: đề tài không đúng ràng buộc đợt hiện hành</h5>
+    <span class="badge bg-danger">{{ restricted_topics|length }} đề tài</span>
+  </div>
+  <div class="card-body-custom">
+    <div class="table-responsive mt-3">
+      <table class="table table-custom" id="restrictedTopicsTable">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Tác giả</th>
+            <th>Đợt/Năm học</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for topic in restricted_topics %}
+            {{ topic_row(topic) }}
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Không có đề tài bị loại khỏi đợt hiện hành.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -175,7 +194,7 @@ function filterTopics() {
   const year = document.getElementById('filterYear').value;
   const status = document.getElementById('filterStatus').value;
   const student = document.getElementById('filterStudent').value;
-  const rows = document.querySelectorAll('#topicsTable tbody tr');
+  const rows = document.querySelectorAll('#topicsTable tbody tr, #restrictedTopicsTable tbody tr');
 
   rows.forEach((row) => {
     const rowYear = row.getAttribute('data-year') || '';
@@ -189,6 +208,8 @@ function filterTopics() {
     row.style.display = matchYear && matchStatus && matchStudent ? '' : 'none';
   });
 }
+
+document.addEventListener('DOMContentLoaded', filterTopics);
 
 function statusText(status) {
   const map = {

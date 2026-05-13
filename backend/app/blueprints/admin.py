@@ -30,11 +30,34 @@ def _serialize_period(period):
 
 
 def _get_current_period(periods):
-    # Ưu tiên đợt đang vận hành (2 hoặc 3), nếu không có thì lấy đợt mới nhất.
-    in_workflow = [period for period in periods if period.trang_thai_dot_hien_tai in (2, 3)]
+    # Ưu tiên đợt chưa kết thúc, nếu không có thì lấy đợt mới nhất.
+    in_workflow = [period for period in periods if period.trang_thai_dot_hien_tai != 6]
     if in_workflow:
         return in_workflow[0]
     return periods[0] if periods else None
+
+
+def _allowed_topic_statuses_for_period(period_phase):
+    phase_map = {
+        1: {TopicStatus.CHO_DUYET_DE_XUAT, TopicStatus.SUA_DE_XUAT, TopicStatus.DA_DUYET, TopicStatus.KHONG_DUYET},
+        2: {TopicStatus.THUC_HIEN},
+        3: {TopicStatus.CHUA_NOP_BAO_CAO, TopicStatus.DA_NOP_BAO_CAO, TopicStatus.SUA_BAO_CAO},
+        4: {TopicStatus.DA_NOP_BAO_CAO, TopicStatus.SUA_BAO_CAO, TopicStatus.CHO_BAO_VE},
+        5: {TopicStatus.CHO_BAO_VE, TopicStatus.HOAN_THANH, TopicStatus.KHONG_THANH_CONG},
+    }
+    return phase_map.get(period_phase, set())
+
+
+def _period_phase_label(period_phase):
+    labels = {
+        1: "Mở đăng ký",
+        2: "Đang thực hiện",
+        3: "Nộp báo cáo",
+        4: "Chờ bảo vệ",
+        5: "Bảo vệ",
+        6: "Hoàn thành",
+    }
+    return labels.get(period_phase, "Không xác định")
 
 
 def _ensure_admin():
@@ -347,13 +370,34 @@ def topics():
     accounts = Account.query.options(joinedload(Account.student)).order_by(Account.id.desc()).all()
     current_period = _get_current_period(periods)
     current_period_data = _serialize_period(current_period) if current_period else None
+    current_period_phase = current_period.trang_thai_dot_hien_tai if current_period else None
+    allowed_topic_statuses = _allowed_topic_statuses_for_period(current_period_phase)
+    visible_topics = []
+    restricted_topics = []
+
+    for topic in topics:
+        if current_period and topic.dot_id == current_period.id:
+            if topic.trang_thai in allowed_topic_statuses:
+                visible_topics.append(topic)
+            else:
+                restricted_topics.append(topic)
+        else:
+            visible_topics.append(topic)
+
+    visible_topics = sorted(visible_topics, key=lambda item: item.id, reverse=True)
+    restricted_topics = sorted(restricted_topics, key=lambda item: item.id, reverse=True)
     periods_data = [_serialize_period(period) for period in periods]
     return render_template(
         "admin/topics.html",
         topics=topics,
+        visible_topics=visible_topics,
+        restricted_topics=restricted_topics,
         periods=periods,
         accounts=accounts,
         current_period_data=current_period_data,
+        current_period_phase=current_period_phase,
+        current_period_phase_label=_period_phase_label(current_period_phase),
+        allowed_topic_statuses=allowed_topic_statuses,
         periods_data=periods_data,
     )
 
