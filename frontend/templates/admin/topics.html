@@ -28,19 +28,10 @@
 
 <div class="content-card">
   <div class="card-header-custom">
-    <h5>Danh sách đề tài</h5>
+    <h5>Danh sách đề tài của Đợt hiện hành</h5>
   </div>
   <div class="card-body-custom">
     <div class="filters-bar d-flex gap-2 flex-wrap">
-      <select class="form-select" id="filterYear" onchange="filterTopics()" style="max-width: 220px;">
-        <option value="">Tất cả năm học</option>
-        {% for p in periods %}
-          {% if p.nam_hoc %}
-          <option value="{{ p.nam_hoc }}" {% if current_period_data and p.nam_hoc == current_period_data.nam_hoc %}selected{% endif %}>{{ p.nam_hoc }}</option>
-          {% endif %}
-        {% endfor %}
-      </select>
-
       <select class="form-select" id="filterStudent" onchange="filterTopics()" style="max-width: 260px;">
         <option value="">Tất cả sinh viên</option>
         {% for acc in accounts %}
@@ -49,7 +40,7 @@
       </select>
 
       <select class="form-select" id="filterStatus" onchange="filterTopics()" style="max-width: 260px;">
-        <option value="">Tất cả trạng thái</option>
+        <option value="">Tất cả trạng thái cho phép</option>
         <option value="1">Chờ xét duyệt đề xuất</option>
         <option value="2">Yêu cầu chỉnh sửa đề xuất</option>
         <option value="3">Đề tài bị từ chối</option>
@@ -75,7 +66,7 @@
         </thead>
         <tbody>
           {% macro topic_row(topic) -%}
-          <tr data-year="{{ topic.dot.nam_hoc if topic.dot else '' }}" data-status="{{ topic.trang_thai }}" data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}">
+          <tr data-status="{{ topic.trang_thai }}" data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}">
             <td>#{{ topic.id }}</td>
             <td>
               <strong>{{ topic.ten_de_tai }}</strong><br>
@@ -153,6 +144,96 @@
   </div>
 </div>
 
+<!-- Danh sách lưu trữ - Đề tài từ các đợt cũ -->
+<div class="card card-custom mt-4">
+  <div class="card-header-custom">
+    <h5>Danh sách lưu trữ <span class="text-muted">(Đề tài từ các đợt cũ)</span></h5>
+  </div>
+  <div class="card-body-custom">
+    <div class="filters-bar d-flex gap-2 flex-wrap">
+      <select class="form-select" id="filterArchiveYear" onchange="filterArchivedTopics()" style="max-width: 220px;">
+        <option value="">Tất cả năm học</option>
+        {% for year in archive_years %}
+          <option value="{{ year }}">{{ year }}</option>
+        {% endfor %}
+      </select>
+
+      <select class="form-select" id="filterArchiveStudent" onchange="filterArchivedTopics()" style="max-width: 260px;">
+        <option value="">Tất cả sinh viên</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.student.id if acc.student else acc.id }}">{{ acc.student.ho_ten if acc.student and acc.student.ho_ten else acc.username }}{% if acc.student and acc.student.mssv %} ({{ acc.student.mssv }}){% endif %}</option>
+        {% endfor %}
+      </select>
+
+      <select class="form-select" id="filterArchiveStatus" onchange="filterArchivedTopics()" style="max-width: 260px;">
+        <option value="">Tất cả trạng thái</option>
+        <option value="1">Chờ xét duyệt đề xuất</option>
+        <option value="2">Yêu cầu chỉnh sửa đề xuất</option>
+        <option value="3">Đề tài bị từ chối</option>
+        <option value="4">Đang thực hiện</option>
+        <option value="5">Chờ nghiệm thu</option>
+        <option value="6">Sửa báo cáo tổng kết</option>
+        <option value="7">Không đạt</option>
+        <option value="8">Đã hoàn thành</option>
+      </select>
+    </div>
+
+    <div class="table-responsive mt-3">
+      <table class="table table-custom" id="archivedTopicsTable">
+        <thead>
+          <tr>
+            <th>Mã ĐT</th>
+            <th>Tên đề tài</th>
+            <th>Tác giả</th>
+            <th>Đợt/Năm học</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for topic in archived_topics %}
+            <tr data-year="{{ topic.dot.nam_hoc if topic.dot else '' }}" data-status="{{ topic.trang_thai }}" data-student="{{ topic.chu_nhiem.id if topic.chu_nhiem else '' }}">
+              <td>#{{ topic.id }}</td>
+              <td>
+                <strong>{{ topic.ten_de_tai }}</strong><br>
+                <small class="text-muted">GVHD: {{ topic.giang_vien_hd or 'Chưa cập nhật' }}</small>
+              </td>
+              <td>
+                {% if topic.chu_nhiem %}
+                  {{ topic.chu_nhiem.ho_ten or topic.chu_nhiem.account.username }}<br>
+                  <small class="text-muted">{{ topic.chu_nhiem.mssv }}</small>
+                {% else %}
+                  <span class="text-muted">Không có dữ liệu</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if topic.dot %}
+                  {{ topic.dot.ten_dot }}<br>
+                  <small class="text-muted">{{ topic.dot.nam_hoc }}</small>
+                {% else %}
+                  <span class="text-muted">Chưa gán đợt</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if topic.trang_thai == 1 %}<span class="badge bg-secondary">Chờ xét duyệt đề xuất</span>{% elif topic.trang_thai == 2 %}<span class="badge bg-warning text-dark">Yêu cầu chỉnh sửa đề xuất</span>{% elif topic.trang_thai == 3 %}<span class="badge bg-dark">Đề tài bị từ chối</span>{% elif topic.trang_thai == 4 %}<span class="badge bg-primary">Đang thực hiện</span>{% elif topic.trang_thai == 5 %}<span class="badge bg-info text-dark">Chờ nghiệm thu</span>{% elif topic.trang_thai == 6 %}<span class="badge bg-warning text-dark">Sửa báo cáo tổng kết</span>{% elif topic.trang_thai == 7 %}<span class="badge bg-danger">Không đạt</span>{% elif topic.trang_thai == 8 %}<span class="badge bg-primary">Đã hoàn thành</span>{% elif topic.trang_thai == 9 %}<span class="badge bg-info text-dark">Chờ bảo vệ</span>{% elif topic.trang_thai == 10 %}<span class="badge bg-success">Hoàn thành</span>{% elif topic.trang_thai == 11 %}<span class="badge bg-danger">Không thành công</span>{% elif topic.trang_thai == 12 %}<span class="badge bg-dark">Bị hủy</span>{% else %}<span class="badge bg-secondary">Không xác định</span>{% endif %}
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary" title="Xem chi tiết" data-bs-toggle="modal" data-bs-target="#topicDetailModal" data-topic-id="{{ topic.id }}" data-topic-title="{{ topic.ten_de_tai }}" data-topic-status="{{ topic.trang_thai }}" data-topic-period="{{ topic.dot.ten_dot if topic.dot else '' }}" data-topic-year="{{ topic.dot.nam_hoc if topic.dot else '' }}" data-topic-author="{{ topic.chu_nhiem.ho_ten if topic.chu_nhiem else '' }}" data-topic-mssv="{{ topic.chu_nhiem.mssv if topic.chu_nhiem else '' }}" data-topic-objective="{{ topic.muc_tieu or '' }}" data-topic-reason="{{ topic.ly_do or '' }}" onclick="showTopicDetail(this)">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </td>
+            </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">Chưa có đề tài lưu trữ nào.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="topicDetailModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
@@ -191,10 +272,26 @@
 {% block extra_js %}
 <script>
 function filterTopics() {
-  const year = document.getElementById('filterYear').value;
   const status = document.getElementById('filterStatus').value;
   const student = document.getElementById('filterStudent').value;
   const rows = document.querySelectorAll('#topicsTable tbody tr, #restrictedTopicsTable tbody tr');
+
+  rows.forEach((row) => {
+    const rowStatus = row.getAttribute('data-status') || '';
+    const rowStudent = row.getAttribute('data-student') || '';
+
+    const matchStatus = !status || rowStatus === status;
+    const matchStudent = !student || rowStudent === student;
+
+    row.style.display = matchStatus && matchStudent ? '' : 'none';
+  });
+}
+
+function filterArchivedTopics() {
+  const year = document.getElementById('filterArchiveYear').value;
+  const status = document.getElementById('filterArchiveStatus').value;
+  const student = document.getElementById('filterArchiveStudent').value;
+  const rows = document.querySelectorAll('#archivedTopicsTable tbody tr');
 
   rows.forEach((row) => {
     const rowYear = row.getAttribute('data-year') || '';
@@ -209,7 +306,10 @@ function filterTopics() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', filterTopics);
+document.addEventListener('DOMContentLoaded', function() {
+  filterTopics();
+  filterArchivedTopics();
+});
 
 function statusText(status) {
   const map = {
